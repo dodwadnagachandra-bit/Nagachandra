@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revx-energy.com/ems/schemas/ota_config",
+  "title": "EMS OTA Manager Configuration",
+  "description": "OTA firmware update settings: staging directory, A/B partition management, Ed25519 package verification, HTTP download parameters, post-update health check, and persistent state path.",
+  "type": "object",
+  "required": [
+    "_schema_version",
+    "staging",
+    "partition",
+    "security",
+    "download",
+    "health_check",
+    "version"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version for migration detection. Must be '1.0'."
+    },
+    "staging": {
+      "type": "object",
+      "description": "Temporary staging area for downloaded and extracted OTA packages.",
+      "required": ["dir", "max_package_mb"],
+      "additionalProperties": false,
+      "properties": {
+        "dir": {
+          "type": "string",
+          "description": "Absolute path to the staging directory. Created automatically if it does not exist."
+        },
+        "max_package_mb": {
+          "type": "integer",
+          "description": "Maximum allowed OTA package size in megabytes. Downloads with Content-Length exceeding this are rejected immediately.",
+          "minimum": 1,
+          "maximum": 2048,
+          "x-unit": "MB"
+        }
+      }
+    },
+    "partition": {
+      "type": "object",
+      "description": "A/B partition configuration for atomic over-the-air updates.",
+      "required": ["boot_flag_path", "active_device", "standby_device"],
+      "additionalProperties": false,
+      "properties": {
+        "boot_flag_path": {
+          "type": "string",
+          "description": "Absolute path to the JSON boot-flag file. Written atomically via tmp+rename. Records active slot, previous slot, boot count, and health-check status."
+        },
+        "active_device": {
+          "type": "string",
+          "description": "Block device path for the currently active partition slot (e.g. /dev/mmcblk0p2)."
+        },
+        "standby_device": {
+          "type": "string",
+          "description": "Block device path for the standby (write target) partition slot (e.g. /dev/mmcblk0p3)."
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "description": "Cryptographic security settings for OTA package verification.",
+      "required": ["public_key_hex"],
+      "additionalProperties": false,
+      "properties": {
+        "public_key_hex": {
+          "type": "string",
+          "description": "Hex-encoded 32-byte Ed25519 public key for verifying OTA manifest signatures. Replace with the real key at commissioning.",
+          "minLength": 64
+        }
+      }
+    },
+    "download": {
+      "type": "object",
+      "description": "HTTP download settings for firmware package retrieval.",
+      "required": ["timeout_s", "chunk_size", "progress_interval_s"],
+      "additionalProperties": false,
+      "properties": {
+        "timeout_s": {
+          "type": "number",
+          "description": "Total download timeout in seconds. Applies to the complete download, not individual chunks.",
+          "minimum": 10,
+          "maximum": 3600,
+          "x-unit": "s"
+        },
+        "chunk_size": {
+          "type": "integer",
+          "description": "HTTP streaming read chunk size in bytes.",
+          "minimum": 4096,
+          "maximum": 1048576,
+          "x-unit": "bytes"
+        },
+        "progress_interval_s": {
+          "type": "number",
+          "description": "Minimum interval in seconds between download progress log messages.",
+          "minimum": 1,
+          "maximum": 60,
+          "x-unit": "s"
+        }
+      }
+    },
+    "health_check": {
+      "type": "object",
+      "description": "Post-update health verification after reboot into the new partition.",
+      "required": ["timeout_s", "poll_interval_s", "services"],
+      "additionalProperties": false,
+      "properties": {
+        "timeout_s": {
+          "type": "number",
+          "description": "Maximum time in seconds to wait for all services to become healthy after reboot.",
+          "minimum": 30,
+          "maximum": 1800,
+          "x-unit": "s"
+        },
+        "poll_interval_s": {
+          "type": "number",
+          "description": "Interval in seconds between health check polls.",
+          "minimum": 1,
+          "maximum": 60,
+          "x-unit": "s"
+        },
+        "services": {
+          "type": "array",
+          "description": "List of systemd service unit names that must be active before confirming the update.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "version": {
+      "type": "object",
+      "description": "Persistent OTA state tracking.",
+      "required": ["state_path"],
+      "additionalProperties": false,
+      "properties": {
+        "state_path": {
+          "type": "string",
+          "description": "Absolute path to the JSON file recording current firmware version, previous version, and OTA state machine state."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReVx BESS Architecture — Module → Rack → EMS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #f8f9fb;
+    --surface: #ffffff;
+    --border: #d0d5dd;
+    --border-light: #e4e7ec;
+    --text-primary: #101828;
+    --text-secondary: #475467;
+    --text-muted: #98a2b3;
+    --ems-color: #1a3a5c;
+    --ems-bg: #eaf1f8;
+    --ems-accent: #2563eb;
+    --rack-color: #1e3a2f;
+    --rack-bg: #e8f5ef;
+    --rack-accent: #16a34a;
+    --module-color: #4a2c1a;
+    --module-bg: #fef3e8;
+    --module-accent: #ea580c;
+    --cell-color: #3b1f5e;
+    --cell-bg: #f3eef8;
+    --cell-accent: #7c3aed;
+    --can-color: #dc2626;
+    --modbus-color: #2563eb;
+    --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
+    --shadow-md: 0 4px 12px rgba(16,24,40,0.08);
+    --shadow-lg: 0 12px 32px rgba(16,24,40,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 40px;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .page-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+
+  .page-header p {
+    font-size: 15px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .architecture-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+  }
+
+  /* ─── TIER LABELS ─── */
+  .tier {
+    position: relative;
+    padding: 0 0 0 0;
+  }
+
+  .tier-label {
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-90deg);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    white-space: nowrap;
+    z-index: 10;
+  }
+
+  /* ─── EMS TIER ─── */
+  .ems-box {
+    background: var(--ems-bg);
+    border: 2px solid var(--ems-accent);
+    border-radius: 12px;
+    padding: 28px 36px;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    margin-bottom: 0;
+  }
+
+  .ems-box .box-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .ems-box .box-tag {
+    background: var(--ems-accent);
+    color: white;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+  }
+
+  .ems-box .box-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ems-color);
+  }
+
+  .ems-box .box-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+
+  .ems-modules {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ems-module-chip {
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ─── CONNECTION LINES ─── */
+  .connection-zone {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 64px;
+    position: relative;
+  }
+
+  .conn-line {
+    width: 2px;
+    height: 100%;
+    position: relative;
+  }
+
+  .conn-line.can {
+    background: var(--can-color);
+  }
+
+  .conn-line.modbus {
+    background: var(--modbus-color);
+    stroke-dasharray: 6, 4;
+  }
+
+  .conn-label {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 5;
+  }
+
+  .conn-label.can-label {
+    background: #fef2f2;
+    color: var(--can-color);
+    border: 1px solid #fecaca;
+  }
+
+  .conn-label.modbus-label {
+    background: #eff6ff;
+    color: var(--modbus-color);
+    border: 1px solid #bfdbfe;
+  }
+
+  /* ─── SVG CONNECTIONS ─── */
+  .svg-connections {
+    width: 100%;
+    height: 60px;
+    overflow: visible;
+  }
+
+  /* ─── RACKS TIER ─── */
+  .racks-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+
+  .rack-box {
+    background: var(--rack-bg);
+    border: 2px solid var(--rack-accent);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    position: relative;
+  }
+
+  .rack-box .box-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .rack-box .box-tag {
+    background: var(--rack-accent);
+    color: white;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 5px;
+  }
+
+  .rack-box .box-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--rack-color);
+  }
+
+  .rack-components {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* PDU inside rack */
+  .pdu-box {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .pdu-box .pdu-icon {
+    width: 32px;
+    height: 32px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .pdu-box .pdu-icon svg {
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+  }
+
+  .pdu-box .pdu-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .pdu-box .pdu-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* BMU inside rack */
+  .bmu-box {
+    background: white;
+    border: 1px solid #c7d7e8;
+    border-left: 3px solid var(--ems-accent);
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .bmu-box .bmu-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ems-color);
+  }
+
+  .bmu-box .bmu-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  /* Modules grid inside rack */
+  .modules-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .module-box {
+    background: var(--module-bg);
+    border: 1.5px solid var(--module-accent);
+    border-radius: 8px;
+    padding: 14px;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+  }
+
+  .module-box .mod-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .module-box .mod-tag {
+    background: var(--module-accent);
+    color: white;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  .module-box .mod-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--module-color);
+  }
+
+  /* Cells inside module */
+  .cells-row {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+
+  .cell {
+    width: 18px;
+    height: 26px;
+    background: linear-gradient(180deg, var(--cell-accent) 0%, #a78bfa 100%);
+    border-radius: 3px;
+    position: relative;
+    opacity: 0.85;
+  }
+
+  .cell::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 3px;
+    background: var(--cell-accent);
+    border-radius: 2px 2px 0 0;
+  }
+
+  .cell-count {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  /* More modules indicator */
+  .more-modules {
+    background: white;
+    border: 1.5px dashed var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* ─── PROTOCOL ARROWS (SVG between tiers) ─── */
+  .protocol-svg {
+    width: 100%;
+    height: 72px;
+    display: block;
+  }
+
+  /* ─── LEGEND ─── */
+  .legend {
+    margin-top: 40px;
+    display: flex;
+    gap: 32px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .legend-line {
+    width: 28px;
+    height: 3px;
+    border-radius: 2px;
+  }
+
+  .legend-line.can { background: var(--can-color); }
+  .legend-line.modbus { background: var(--modbus-color); background: repeating-linear-gradient(90deg, var(--modbus-color) 0px, var(--modbus-color) 6px, transparent 6px, transparent 10px); }
+
+  .legend-box {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1.5px solid;
+  }
+
+  .legend-box.ems { background: var(--ems-bg); border-color: var(--ems-accent); }
+  .legend-box.rack { background: var(--rack-bg); border-color: var(--rack-accent); }
+  .legend-box.module { background: var(--module-bg); border-color: var(--module-accent); }
+
+  /* ─── HIERARCHY LABELS ─── */
+  .hierarchy-strip {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin-bottom: 32px;
+    align-items: center;
+  }
+
+  .h-level {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 6px;
+  }
+
+  .h-level.ems { background: var(--ems-bg); color: var(--ems-accent); border: 1px solid var(--ems-accent); }
+  .h-level.rack { background: var(--rack-bg); color: var(--rack-accent); border: 1px solid var(--rack-accent); }
+  .h-level.module { background: var(--module-bg); color: var(--module-accent); border: 1px solid var(--module-accent); }
+  .h-level.cell { background: var(--cell-bg); color: var(--cell-accent); border: 1px solid var(--cell-accent); }
+
+  .h-arrow {
+    font-size: 18px;
+    color: var(--text-muted);
+    font-weight: 300;
+  }
+
+  /* ─── INTERNAL RACK CONN ─── */
+  .internal-conn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 0;
+  }
+
+  .internal-conn .ic-line {
+    width: 32px;
+    height: 2px;
+    background: repeating-linear-gradient(90deg, var(--can-color) 0px, var(--can-color) 4px, transparent 4px, transparent 7px);
+  }
+
+  .internal-conn .ic-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--can-color);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* ─── ANNOTATION CALLOUTS ─── */
+  .annotation {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  .rack-info {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .rack-info-chip {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    background: white;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    padding: 3px 8px;
+    color: var(--text-secondary);
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>ReVx BESS — Battery Architecture</h1>
+  <p>Hierarchical topology: Cell → Module (LMU) → Rack (BMU) → EMS</p>
+</div>
+
+<!-- Hierarchy Strip -->
+<div class="hierarchy-strip">
+  <span class="h-level cell">Cell</span>
+  <span class="h-arrow">→</span>
+  <span class="h-level module">Module (LMU)</span>
+  <span class="h-arrow">→</span>
+  <span class="h-level rack">Rack (BMU)</span>
+  <span class="h-arrow">→</span>
+  <span class="h-level ems">EMS</span>
+</div>
+
+<div class="architecture-container">
+
+  <!-- ═══════ EMS TIER ═══════ -->
+  <div class="ems-box">
+    <div class="box-header">
+      <span class="box-tag">EMS</span>
+      <span class="box-title">Energy Management System</span>
+    </div>
+    <div class="box-subtitle">Advantech ECU-1170-552A &nbsp;·&nbsp; Manages all racks via CAN Layer 2 (BMU→EMS)</div>
+    <div class="ems-modules">
+      <span class="ems-module-chip">State Machine</span>
+      <span class="ems-module-chip">Control Mgr</span>
+      <span class="ems-module-chip">Comm Mgr</span>
+      <span class="ems-module-chip">Alarm Mgr</span>
+      <span class="ems-module-chip">Safety Mgr</span>
+      <span class="ems-module-chip">Data Mgr (RTDB)</span>
+      <span class="ems-module-chip">HMI Server</span>
+      <span class="ems-module-chip">Cloud MQTT</span>
+      <span class="ems-module-chip">PCS · Meter · BTMS · DG · PV</span>
+    </div>
+  </div>
+
+  <!-- CAN L2 Connection -->
+  <svg class="protocol-svg" viewBox="0 0 1100 72" preserveAspectRatio="xMidYMid meet">
+    <!-- Left arrow -->
+    <line x1="275" y1="0" x2="275" y2="72" stroke="#dc2626" stroke-width="2.5"/>
+    <polygon points="275,0 269,12 281,12" fill="#dc2626"/>
+    <polygon points="275,72 269,60 281,60" fill="#dc2626"/>
+    <!-- Right arrow -->
+    <line x1="825" y1="0" x2="825" y2="72" stroke="#dc2626" stroke-width="2.5"/>
+    <polygon points="825,0 819,12 831,12" fill="#dc2626"/>
+    <polygon points="825,72 819,60 831,60" fill="#dc2626"/>
+    <!-- Label -->
+    <rect x="440" y="24" width="220" height="24" rx="4" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+    <text x="550" y="41" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="500" fill="#dc2626">CAN Layer 2 · BMU → EMS</text>
+  </svg>
+
+  <!-- ═══════ RACKS TIER ═══════ -->
+  <div class="racks-container">
+
+    <!-- RACK 1 -->
+    <div class="rack-box">
+      <div class="box-header">
+        <span class="box-tag">RACK 1</span>
+        <span class="box-title">Battery Rack</span>
+      </div>
+      <div class="rack-components">
+        <!-- PDU -->
+        <div class="pdu-box">
+          <div class="pdu-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <div>
+            <div class="pdu-label">PDU</div>
+            <div class="pdu-desc">Power Distribution Unit · Fuses · Contactors</div>
+          </div>
+        </div>
+
+        <!-- BMU -->
+        <div class="bmu-box">
+          <div class="bmu-label">BMU — Battery Management Unit</div>
+          <div class="bmu-desc">Aggregates all LMU data → sends pack-level SOC, V, I, faults to EMS via CAN L2</div>
+        </div>
+
+        <!-- Internal CAN L1 -->
+        <div class="internal-conn">
+          <span class="ic-line"></span>
+          <span class="ic-label">CAN Layer 1 · LMU → BMU</span>
+          <span class="ic-line"></span>
+        </div>
+
+        <!-- Modules -->
+        <div class="modules-grid">
+          <div class="module-box">
+            <div class="mod-header">
+              <span class="mod-tag">LMU</span>
+              <span class="mod-label">Module 1</span>
+            </div>
+            <div class="cells-row">
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div>
+            </div>
+            <div class="cell-count">16S – 108S cells in series</div>
+          </div>
+
+          <div class="module-box">
+            <div class="mod-header">
+              <span class="mod-tag">LMU</span>
+              <span class="mod-label">Module 2</span>
+            </div>
+            <div class="cells-row">
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div>
+            </div>
+            <div class="cell-count">16S – 108S cells in series</div>
+          </div>
+
+          <div class="module-box">
+            <div class="mod-header">
+              <span class="mod-tag">LMU</span>
+              <span class="mod-label">Module 3</span>
+            </div>
+            <div class="cells-row">
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div>
+            </div>
+            <div class="cell-count">16S – 108S cells in series</div>
+          </div>
+
+          <div class="more-modules">⋯ up to 20 modules</div>
+        </div>
+
+        <div class="rack-info">
+          <span class="rack-info-chip">3–20 modules/rack</span>
+          <span class="rack-info-chip">YAML: modules_per_rack</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- RACK N -->
+    <div class="rack-box">
+      <div class="box-header">
+        <span class="box-tag">RACK N</span>
+        <span class="box-title">Battery Rack</span>
+      </div>
+      <div class="rack-components">
+        <!-- PDU -->
+        <div class="pdu-box">
+          <div class="pdu-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <div>
+            <div class="pdu-label">PDU</div>
+            <div class="pdu-desc">Power Distribution Unit · Fuses · Contactors</div>
+          </div>
+        </div>
+
+        <!-- BMU -->
+        <div class="bmu-box">
+          <div class="bmu-label">BMU — Battery Management Unit</div>
+          <div class="bmu-desc">Aggregates all LMU data → sends pack-level SOC, V, I, faults to EMS via CAN L2</div>
+        </div>
+
+        <!-- Internal CAN L1 -->
+        <div class="internal-conn">
+          <span class="ic-line"></span>
+          <span class="ic-label">CAN Layer 1 · LMU → BMU</span>
+          <span class="ic-line"></span>
+        </div>
+
+        <!-- Modules -->
+        <div class="modules-grid">
+          <div class="module-box">
+            <div class="mod-header">
+              <span class="mod-tag">LMU</span>
+              <span class="mod-label">Module 1</span>
+            </div>
+            <div class="cells-row">
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div>
+            </div>
+            <div class="cell-count">16S – 108S cells in series</div>
+          </div>
+
+          <div class="module-box">
+            <div class="mod-header">
+              <span class="mod-tag">LMU</span>
+              <span class="mod-label">Module 2</span>
+            </div>
+            <div class="cells-row">
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div>
+            </div>
+            <div class="cell-count">16S – 108S cells in series</div>
+          </div>
+
+          <div class="module-box">
+            <div class="mod-header">
+              <span class="mod-tag">LMU</span>
+              <span class="mod-label">Module 3</span>
+            </div>
+            <div class="cells-row">
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div>
+            </div>
+            <div class="cell-count">16S – 108S cells in series</div>
+          </div>
+
+          <div class="more-modules">⋯ up to 20 modules</div>
+        </div>
+
+        <div class="rack-info">
+          <span class="rack-info-chip">1–16 racks/cluster</span>
+          <span class="rack-info-chip">YAML: racks_per_cluster</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════ LEGEND ═══════ -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-line can"></div>
+      <span>CAN 2.0B / FD — BMS Communication</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-box ems"></div>
+      <span>EMS — Energy Management System</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-box rack"></div>
+      <span>Rack — Pack + BMU + PDU</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-box module"></div>
+      <span>Module — LMU + Cells</span>
+    </div>
+  </div>
+
+  <p class="annotation" style="margin-top: 20px;">
+    Config-driven: cells_per_module (16S–108S) · modules_per_rack (3–20) · racks_per_cluster (1–16) · cluster_count (1–8+)
+  </p>
+
+</div>
+
+</body>
+</html>

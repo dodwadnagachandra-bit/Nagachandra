@@ -1,0 +1,23 @@
+# BTMS Configuration — Residential Profile (50 kWh class)
+# Battery Thermal Management System via Modbus RTU on RS485-2
+# Validates against: config/schemas/btms_config.schema.json
+
+_schema_version: "1.0"
+
+connection:
+  protocol: rtu            # Modbus transport: 'rtu' (RS485) or 'tcp' (Ethernet)
+  slave_id: 2              # Modbus slave ID [1-247]; BTMS is typically slave 2
+  device: /dev/ttyUSB1     # RS485 serial port — RS485-2 on ECU-1170-552A
+  baud_rate: 9600          # Serial baud rate [bps]; must match BTMS hardware config
+  parity: "N"              # Serial parity: N=None, E=Even, O=Odd
+  stopbits: 1              # Stop bits: 1 (standard)
+
+device:
+  mode: air                # Thermal management mode: 'air' (fan cooling) or 'liquid'
+  setpoint_temp_c: 25      # Target battery temperature [°C]; valid range: 15-35°C
+                           # 25°C is optimal for LFP cycle life at residential scale
+
+timing:
+  poll_interval_ms: 2000   # Poll BTMS registers every 2s [ms]; 500-5000ms valid
+                           # 2s is sufficient for thermal control response
+  timeout_ms: 3000         # Modbus request timeout [ms]; 500-10000ms valid

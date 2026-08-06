@@ -1,0 +1,29 @@
+[Unit]
+Description=EMS Config Manager - Configuration Validation and Serving
+After=ems-data-manager.service
+Wants=ems-data-manager.service
+
+[Service]
+Type=simple
+ExecStartPre=/bin/mkdir -p /run/ems
+ExecStartPre=/bin/mkdir -p /var/lib/ems/config/backups
+ExecStart=/opt/ems/python/.venv/bin/python -m ems_config_manager --config-dir /etc/ems/config --schema-dir /etc/ems/config/schemas
+Restart=always
+RestartSec=2
+User=ems
+Group=ems
+
+# Security hardening — production (PROD-06)
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=/data /run/ems /dev/shm
+RuntimeDirectory=ems
+MemoryMax=256M
+MemoryHigh=200M
+CPUQuota=50%
+SystemCallFilter=@system-service
+
+[Install]
+WantedBy=multi-user.target

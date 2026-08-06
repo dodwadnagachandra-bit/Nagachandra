@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revx-energy.com/ems/schemas/cloud_config",
+  "title": "EMS Cloud Manager Configuration",
+  "description": "MQTT broker connection, authentication, telemetry publish settings, and offline buffering configuration for cloud_manager. All cloud communication uses MQTT over TLS 1.3 with mutual TLS (mTLS) certificate authentication.",
+  "type": "object",
+  "required": [
+    "_schema_version",
+    "broker",
+    "auth",
+    "telemetry",
+    "offline_buffer"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version for migration detection. Must match the schema expected version."
+    },
+    "broker": {
+      "type": "object",
+      "description": "MQTT broker connection parameters. The EMS connects as a client to the cloud broker at site commissioning.",
+      "required": [
+        "host",
+        "port",
+        "protocol"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "type": "string",
+          "description": "MQTT broker hostname or IP address. Example: mqtt.revx-energy.com"
+        },
+        "port": {
+          "type": "integer",
+          "description": "MQTT broker TCP port. Port 8883 is the standard MQTT over TLS port (MQTTS). Port 1883 is unencrypted MQTT (never use in production).",
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 8883,
+          "x-unit": "port"
+        },
+        "protocol": {
+          "type": "string",
+          "description": "MQTT transport protocol. 'mqtts' = MQTT over TLS 1.3 (required for production); 'mqtt' = unencrypted (test/lab only).",
+          "enum": [
+            "mqtts",
+            "mqtt"
+          ]
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "description": "Authentication method and certificate paths for cloud broker connection. mTLS is required in production \u2014 both client and server certificates are verified.",
+      "required": [
+        "method"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "description": "Authentication method. 'mtls' = mutual TLS with client certificate (production); 'token' = bearer token (development/test).",
+          "enum": [
+            "mtls",
+            "token"
+          ]
+        },
+        "ca_cert_path": {
+          "type": "string",
+          "description": "Filesystem path to the CA certificate bundle for verifying the broker's TLS certificate. Example: /etc/ems/certs/ca.crt"
+        },
+        "client_cert_path": {
+          "type": "string",
+          "description": "Filesystem path to this device's client certificate for mTLS authentication. Issued per device at commissioning. Example: /etc/ems/certs/device.crt"
+        },
+        "client_key_path": {
+          "type": "string",
+          "description": "Filesystem path to this device's private key for mTLS authentication. Must be protected with filesystem permissions (0600). Example: /etc/ems/certs/device.key"
+        }
+      }
+    },
+    "telemetry": {
+      "type": "object",
+      "description": "Telemetry publish rate and MQTT topic namespace. All data is published to {topic_prefix}/telemetry on the configured interval.",
+      "required": [
+        "interval_s",
+        "topic_prefix"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "interval_s": {
+          "type": "integer",
+          "description": "Telemetry publish interval in seconds. Shorter intervals increase data granularity but increase cloud data ingestion costs. Typical: 60s.",
+          "minimum": 1,
+          "maximum": 300,
+          "x-unit": "s"
+        },
+        "topic_prefix": {
+          "type": "string",
+          "description": "MQTT topic prefix for all messages from this site. Must match the site registration in the cloud platform. Example: ems/RES-001"
+        }
+      }
+    },
+    "offline_buffer": {
+      "type": "object",
+      "description": "Local offline data buffer settings. When cloud connection is lost, telemetry is buffered locally and uploaded when connectivity resumes.",
+      "required": [
+        "enabled",
+        "max_hours",
+        "max_mb"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable offline data buffering. When true, telemetry is stored to local disk during connectivity loss. When false, data during outages is discarded."
+        },
+        "max_hours": {
+          "type": "integer",
+          "description": "Maximum offline buffer retention in hours. Older data is discarded when this limit is reached. 24h covers typical daily maintenance windows.",
+          "minimum": 1,
+          "maximum": 168,
+          "x-unit": "h"
+        },
+        "max_mb": {
+          "type": "integer",
+          "description": "Maximum offline buffer size in megabytes. When exceeded, oldest data is deleted to make space. Set based on available storage on the ECU.",
+          "minimum": 1,
+          "maximum": 500,
+          "x-unit": "MB"
+        }
+      }
+    }
+  }
+}

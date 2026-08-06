@@ -1,0 +1,6 @@
+[Unit]
+Description=EMS — Energy Management System
+Documentation=https://github.com/ReVx-Energy/EMS
+
+[Install]
+WantedBy=multi-user.target

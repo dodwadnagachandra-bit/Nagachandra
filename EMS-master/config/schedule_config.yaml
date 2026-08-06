@@ -1,0 +1,123 @@
+# Schedule Configuration — Residential Profile (50 kWh class)
+# Hot-reloadable: schedule changes take effect without service restart
+# Validates against: config/schemas/schedule_config.schema.json
+
+_schema_version: "1.0"
+
+mode: time_of_day          # Scheduler mode: 'manual', 'time_of_day', or 'curve'
+                           # time_of_day uses the time_windows array below
+
+time_windows:
+  - start: "06:00"         # Daytime discharge window: supply load from BESS
+    end: "18:00"           # Window end time (HH:MM 24-hour format)
+    action: discharge      # Action: 'charge', 'discharge', or 'idle'
+    power_kw: 10           # Power setpoint [kW]; must be within control_config limits
+
+  - start: "22:00"         # Off-peak charging window: charge from cheap grid power
+    end: "06:00"           # Wraps to next day (22:00 to 06:00)
+    action: charge
+    power_kw: 15           # Charge at 15 kW during off-peak TOU rate
+
+day_night:
+  day_start: "06:00"       # Daytime begins at 06:00 — solar priority active (HH:MM)
+  night_start: "18:00"     # Nighttime begins at 18:00 — grid/BESS priority
+
+power_curve:               # 96-point daily power curve (15-min intervals, mode='curve')
+  # Index 0=00:00, index 95=23:45. Positive=discharge [kW], negative=charge [kW]
+  # Default: all zeros (idle) — edit for time-of-use optimization
+  - 0   # 00:00
+  - 0   # 00:15
+  - 0   # 00:30
+  - 0   # 00:45
+  - 0   # 01:00
+  - 0   # 01:15
+  - 0   # 01:30
+  - 0   # 01:45
+  - 0   # 02:00
+  - 0   # 02:15
+  - 0   # 02:30
+  - 0   # 02:45
+  - 0   # 03:00
+  - 0   # 03:15
+  - 0   # 03:30
+  - 0   # 03:45
+  - 0   # 04:00
+  - 0   # 04:15
+  - 0   # 04:30
+  - 0   # 04:45
+  - 0   # 05:00
+  - 0   # 05:15
+  - 0   # 05:30
+  - 0   # 05:45
+  - 0   # 06:00
+  - 0   # 06:15
+  - 0   # 06:30
+  - 0   # 06:45
+  - 0   # 07:00
+  - 0   # 07:15
+  - 0   # 07:30
+  - 0   # 07:45
+  - 0   # 08:00
+  - 0   # 08:15
+  - 0   # 08:30
+  - 0   # 08:45
+  - 0   # 09:00
+  - 0   # 09:15
+  - 0   # 09:30
+  - 0   # 09:45
+  - 0   # 10:00
+  - 0   # 10:15
+  - 0   # 10:30
+  - 0   # 10:45
+  - 0   # 11:00
+  - 0   # 11:15
+  - 0   # 11:30
+  - 0   # 11:45
+  - 0   # 12:00
+  - 0   # 12:15
+  - 0   # 12:30
+  - 0   # 12:45
+  - 0   # 13:00
+  - 0   # 13:15
+  - 0   # 13:30
+  - 0   # 13:45
+  - 0   # 14:00
+  - 0   # 14:15
+  - 0   # 14:30
+  - 0   # 14:45
+  - 0   # 15:00
+  - 0   # 15:15
+  - 0   # 15:30
+  - 0   # 15:45
+  - 0   # 16:00
+  - 0   # 16:15
+  - 0   # 16:30
+  - 0   # 16:45
+  - 0   # 17:00
+  - 0   # 17:15
+  - 0   # 17:30
+  - 0   # 17:45
+  - 0   # 18:00
+  - 0   # 18:15
+  - 0   # 18:30
+  - 0   # 18:45
+  - 0   # 19:00
+  - 0   # 19:15
+  - 0   # 19:30
+  - 0   # 19:45
+  - 0   # 20:00
+  - 0   # 20:15
+  - 0   # 20:30
+  - 0   # 20:45
+  - 0   # 21:00
+  - 0   # 21:15
+  - 0   # 21:30
+  - 0   # 21:45
+  - 0   # 22:00
+  - 0   # 22:15
+  - 0   # 22:30
+  - 0   # 22:45
+  - 0   # 23:00
+  - 0   # 23:15
+  - 0   # 23:30
+  - 0   # 23:45

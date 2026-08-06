@@ -1,0 +1,2472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReVx EMS — Architecture & Requirements</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   CYBERPUNK THEME — CORE VARIABLES
+   ═══════════════════════════════════════════ */
+:root {
+  --bg-deep: #05050a;
+  --bg-panel: #0a0b14;
+  --bg-card: #0f1020;
+  --bg-card-hover: #141530;
+  --border-dim: #1a1b3a;
+  --border-glow: #00f5ff33;
+  --cyan: #00f5ff;
+  --cyan-dim: #00f5ff66;
+  --magenta: #ff0066;
+  --magenta-dim: #ff006644;
+  --green: #00ff88;
+  --green-dim: #00ff8844;
+  --yellow: #ffe600;
+  --yellow-dim: #ffe60044;
+  --orange: #ff8800;
+  --red: #ff2244;
+  --text-primary: #e0e6f0;
+  --text-secondary: #8890a8;
+  --text-dim: #4a5068;
+  --font-display: 'Orbitron', monospace;
+  --font-body: 'Rajdhani', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --glow-cyan: 0 0 10px #00f5ff44, 0 0 30px #00f5ff22;
+  --glow-magenta: 0 0 10px #ff006644, 0 0 30px #ff006622;
+  --glow-green: 0 0 10px #00ff8844, 0 0 30px #00ff8822;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { font-size: 18px; }
+
+body {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border-dim) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-dim) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════ */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border-dim);
+  padding: 0.8rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(12px);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-brand h1 {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--cyan);
+  text-shadow: var(--glow-cyan);
+  letter-spacing: 3px;
+}
+
+.header-brand .version {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--magenta);
+  background: var(--magenta-dim);
+  padding: 2px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--magenta);
+}
+
+.header-status {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 1.5rem;
+}
+
+.header-status .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 5px;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.dot-cyan { background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ═══════════════════════════════════════════
+   TAB NAVIGATION
+   ═══════════════════════════════════════════ */
+.tab-nav {
+  display: flex;
+  gap: 0;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-dim);
+  position: sticky;
+  top: 52px;
+  z-index: 99;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 0.9rem 1rem;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  text-align: center;
+}
+
+.tab-btn:hover {
+  color: var(--text-secondary);
+  background: rgba(0,245,255,0.03);
+}
+
+.tab-btn.active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+  text-shadow: var(--glow-cyan);
+  background: rgba(0,245,255,0.05);
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--cyan);
+  box-shadow: 0 0 15px var(--cyan), 0 0 30px rgba(0,245,255,0.3);
+}
+
+.tab-content {
+  display: none;
+  padding: 1.5rem;
+  position: relative;
+  z-index: 1;
+  min-height: calc(100vh - 120px);
+}
+
+.tab-content.active { display: block; }
+
+/* ═══════════════════════════════════════════
+   ARCHITECTURE CANVAS (Shared)
+   ═══════════════════════════════════════════ */
+.arch-canvas {
+  position: relative;
+  width: 100%;
+  min-height: 780px;
+  overflow: visible;
+}
+
+/* Node boxes */
+.node {
+  position: absolute;
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+  min-width: 120px;
+  text-align: center;
+}
+
+.node:hover {
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+  transform: translateY(-2px);
+  z-index: 20;
+}
+
+.node.node-ems {
+  background: linear-gradient(135deg, #0a1628, #0f1a30);
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan), inset 0 0 30px rgba(0,245,255,0.05);
+  min-width: 180px;
+  padding: 1rem;
+}
+
+.node.node-bms { border-color: var(--green); }
+.node.node-bms:hover { box-shadow: var(--glow-green); }
+.node.node-pcs { border-color: var(--magenta); }
+.node.node-pcs:hover { box-shadow: var(--glow-magenta); }
+.node.node-safety { border-color: var(--red); }
+.node.node-cloud { border-color: var(--yellow); }
+.node.node-grid { border-color: var(--orange); }
+
+.node-label {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-bottom: 4px;
+}
+
+.node-bms .node-label { color: var(--green); }
+.node-pcs .node-label { color: var(--magenta); }
+.node-safety .node-label { color: var(--red); }
+.node-cloud .node-label { color: var(--yellow); }
+.node-grid .node-label { color: var(--orange); }
+
+.node-sub {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.node-proto {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-dim);
+}
+
+/* ═══════════════════════════════════════════
+   SVG CONNECTION LINES + ANIMATED PARTICLES
+   ═══════════════════════════════════════════ */
+.connections-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.conn-line {
+  fill: none;
+  stroke-width: 1.5;
+  opacity: 0.4;
+}
+
+.conn-line-cyan { stroke: var(--cyan); }
+.conn-line-green { stroke: var(--green); }
+.conn-line-magenta { stroke: var(--magenta); }
+.conn-line-yellow { stroke: var(--yellow); }
+.conn-line-orange { stroke: var(--orange); }
+.conn-line-red { stroke: var(--red); }
+
+/* Animated particles along paths */
+.particle {
+  fill: var(--cyan);
+  filter: url(#glow);
+}
+
+.particle-green { fill: var(--green); }
+.particle-magenta { fill: var(--magenta); }
+.particle-yellow { fill: var(--yellow); }
+.particle-orange { fill: var(--orange); }
+.particle-red { fill: var(--red); }
+
+/* ═══════════════════════════════════════════
+   MODAL SYSTEM
+   ═══════════════════════════════════════════ */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(5,5,10,0.85);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.show { display: flex; }
+
+.modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--cyan);
+  box-shadow: var(--glow-cyan), 0 20px 60px rgba(0,0,0,0.5);
+  border-radius: 4px;
+  max-width: 700px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-header {
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid var(--border-dim);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--bg-panel);
+  z-index: 2;
+}
+
+.modal-header h2 {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--cyan);
+  letter-spacing: 2px;
+  text-shadow: var(--glow-cyan);
+}
+
+.modal-close {
+  background: none;
+  border: 1px solid var(--border-dim);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  border-color: var(--magenta);
+  color: var(--magenta);
+}
+
+.modal-body {
+  padding: 1.2rem;
+}
+
+.modal-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.modal-body th {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  color: var(--cyan);
+  letter-spacing: 1px;
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--cyan-dim);
+  text-transform: uppercase;
+}
+
+.modal-body td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border-dim);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.modal-body td:first-child {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.tech-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 1px 6px;
+  border-radius: 2px;
+  margin: 1px 2px;
+}
+
+.tech-tag-c { background: #1a3a1a; color: var(--green); border: 1px solid #1a5a1a; }
+.tech-tag-py { background: #1a1a3a; color: #6688ff; border: 1px solid #2a2a5a; }
+.tech-tag-proto { background: #2a1a1a; color: var(--orange); border: 1px solid #3a2a1a; }
+.tech-tag-lib { background: #1a2a2a; color: var(--cyan); border: 1px solid #1a3a3a; }
+
+/* ═══════════════════════════════════════════
+   SOFTWARE ARCHITECTURE (Tab 2)
+   ═══════════════════════════════════════════ */
+.sw-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.sw-layer {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  padding: 0.8rem 1rem;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.sw-layer:hover {
+  border-color: var(--cyan-dim);
+}
+
+.sw-layer-label {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sw-layer-label .layer-num {
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  font-size: 0.55rem;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+
+.sw-modules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sw-module {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-dim);
+  border-radius: 3px;
+  padding: 0.5rem 0.7rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  flex: 1;
+  min-width: 150px;
+}
+
+.sw-module:hover {
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+  transform: translateY(-1px);
+}
+
+.sw-module-name {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.sw-module-lang {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.sw-module-desc {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.sw-ipc-bar {
+  background: linear-gradient(90deg, transparent, var(--cyan-dim), transparent);
+  border: 1px dashed var(--cyan-dim);
+  border-radius: 2px;
+  padding: 0.3rem 0.8rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--cyan);
+  position: relative;
+  overflow: hidden;
+}
+
+.sw-ipc-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,245,255,0.1), transparent);
+  animation: ipc-flow 3s linear infinite;
+}
+
+@keyframes ipc-flow {
+  0% { left: -50%; }
+  100% { left: 100%; }
+}
+
+/* ═══════════════════════════════════════════
+   HARDWARE ARCHITECTURE (Tab 3)
+   ═══════════════════════════════════════════ */
+.hw-layout {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.hw-controller {
+  background: var(--bg-card);
+  border: 2px solid var(--cyan);
+  border-radius: 6px;
+  padding: 1.2rem;
+  box-shadow: var(--glow-cyan);
+  margin-bottom: 1.5rem;
+}
+
+.hw-controller-title {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  color: var(--cyan);
+  text-shadow: var(--glow-cyan);
+  letter-spacing: 2px;
+  margin-bottom: 0.8rem;
+  text-align: center;
+}
+
+.hw-specs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+}
+
+.hw-spec {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-dim);
+  border-radius: 3px;
+  padding: 0.5rem 0.7rem;
+}
+
+.hw-spec-label {
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.hw-spec-value {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.hw-interfaces {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.hw-iface {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  padding: 0.7rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.hw-iface:hover {
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+.hw-iface::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+}
+
+.hw-iface-can::before { background: var(--green); }
+.hw-iface-rs485::before { background: var(--magenta); }
+.hw-iface-eth::before { background: var(--cyan); }
+.hw-iface-gpio::before { background: var(--yellow); }
+.hw-iface-hdmi::before { background: var(--orange); }
+
+.hw-iface-title {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.hw-iface-can .hw-iface-title { color: var(--green); }
+.hw-iface-rs485 .hw-iface-title { color: var(--magenta); }
+.hw-iface-eth .hw-iface-title { color: var(--cyan); }
+.hw-iface-gpio .hw-iface-title { color: var(--yellow); }
+.hw-iface-hdmi .hw-iface-title { color: var(--orange); }
+
+.hw-iface-detail {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Data flow animation stripe on interface cards */
+.hw-iface .flow-stripe {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  overflow: hidden;
+}
+
+.hw-iface .flow-stripe::after {
+  content: '';
+  position: absolute;
+  width: 30%;
+  height: 100%;
+  animation: stripe-flow 2s linear infinite;
+}
+
+.hw-iface-can .flow-stripe::after { background: var(--green); }
+.hw-iface-rs485 .flow-stripe::after { background: var(--magenta); }
+.hw-iface-eth .flow-stripe::after { background: var(--cyan); }
+.hw-iface-gpio .flow-stripe::after { background: var(--yellow); }
+
+@keyframes stripe-flow {
+  0% { left: -30%; }
+  100% { left: 100%; }
+}
+
+/* ═══════════════════════════════════════════
+   REQUIREMENTS TAB (Tab 4)
+   ═══════════════════════════════════════════ */
+.req-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.req-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.req-toolbar button {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  padding: 0.4rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.2s;
+}
+
+.req-toolbar button:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.req-toolbar button.active {
+  background: rgba(0,245,255,0.1);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+#req-editor {
+  width: 100%;
+  min-height: 500px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  padding: 1.2rem;
+  resize: vertical;
+  outline: none;
+  tab-size: 2;
+}
+
+#req-editor:focus {
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+
+#req-preview {
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  padding: 1.5rem;
+  min-height: 500px;
+  line-height: 1.8;
+  font-size: 0.8rem;
+}
+
+#req-preview h1 { font-family: var(--font-display); color: var(--cyan); font-size: 1.3rem; margin: 1.5rem 0 0.8rem; letter-spacing: 2px; text-shadow: var(--glow-cyan); }
+#req-preview h2 { font-family: var(--font-display); color: var(--cyan); font-size: 1rem; margin: 1.2rem 0 0.6rem; letter-spacing: 1px; border-bottom: 1px solid var(--border-dim); padding-bottom: 0.3rem; }
+#req-preview h3 { font-family: var(--font-display); color: var(--magenta); font-size: 0.85rem; margin: 1rem 0 0.5rem; letter-spacing: 1px; }
+#req-preview h4 { font-family: var(--font-display); color: var(--green); font-size: 0.75rem; margin: 0.8rem 0 0.4rem; }
+#req-preview p { margin: 0.5rem 0; color: var(--text-secondary); }
+#req-preview code { font-family: var(--font-mono); background: var(--bg-panel); padding: 1px 5px; border-radius: 2px; color: var(--cyan); font-size: 0.7rem; }
+#req-preview pre { background: var(--bg-panel); border: 1px solid var(--border-dim); border-radius: 3px; padding: 0.8rem; overflow-x: auto; margin: 0.5rem 0; }
+#req-preview pre code { background: none; padding: 0; }
+#req-preview ul, #req-preview ol { padding-left: 1.5rem; margin: 0.4rem 0; color: var(--text-secondary); }
+#req-preview li { margin: 0.2rem 0; }
+#req-preview table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; table-layout: fixed; }
+#req-preview th { background: var(--bg-panel); color: var(--cyan); font-family: var(--font-display); font-size: 0.6rem; letter-spacing: 1px; text-align: left; padding: 0.5rem 0.6rem; border: 1px solid var(--border-dim); word-wrap: break-word; }
+#req-preview td { padding: 0.4rem 0.6rem; border: 1px solid var(--border-dim); font-size: 0.72rem; word-wrap: break-word; vertical-align: top; }
+#req-preview blockquote { border-left: 3px solid var(--magenta); padding-left: 0.8rem; margin: 0.5rem 0; color: var(--text-dim); font-style: italic; }
+#req-preview strong { color: var(--text-primary); }
+#req-preview hr { border: none; border-top: 1px solid var(--border-dim); margin: 1rem 0; }
+
+/* ═══════════════════════════════════════════
+   SECTION TITLES
+   ═══════════════════════════════════════════ */
+.section-title {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-dim);
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.section-title .title-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-dim), transparent);
+}
+
+/* ═══════════════════════════════════════════
+   LEGEND
+   ═══════════════════════════════════════════ */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.8rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-dim);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+}
+
+.legend-color {
+  width: 20px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+/* ═══════════════════════════════════════════
+   TOOLTIP
+   ═══════════════════════════════════════════ */
+.tooltip {
+  position: absolute;
+  background: var(--bg-panel);
+  border: 1px solid var(--cyan);
+  border-radius: 3px;
+  padding: 0.5rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-primary);
+  box-shadow: var(--glow-cyan);
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  max-width: 250px;
+}
+
+.tooltip.visible { opacity: 1; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-deep); }
+::-webkit-scrollbar-thumb { background: var(--border-dim); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--cyan-dim); }
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .header { padding: 0.5rem 1rem; }
+  .tab-btn { font-size: 0.55rem; padding: 0.6rem 0.5rem; letter-spacing: 1px; }
+  .node { min-width: 90px; padding: 0.4rem; }
+  .node-label { font-size: 0.55rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     HEADER
+     ═══════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-brand">
+    <h1>ReVx EMS</h1>
+    <span class="version">v3.1</span>
+  </div>
+  <div class="header-status">
+    <span><span class="dot dot-green"></span>ARCHITECTURE</span>
+    <span><span class="dot dot-cyan"></span>REQUIREMENTS</span>
+    <span>SPEC // FEB 2026</span>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════
+     TAB NAVIGATION
+     ═══════════════════════════════════════════ -->
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="overall">▣ Overall Architecture</button>
+  <button class="tab-btn" data-tab="software">◈ Software Architecture</button>
+  <button class="tab-btn" data-tab="hardware">⬡ Hardware Architecture</button>
+  <button class="tab-btn" data-tab="requirements">▤ Requirement Specification</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════
+     TAB 1: OVERALL ARCHITECTURE
+     ═══════════════════════════════════════════ -->
+<section id="tab-overall" class="tab-content active">
+  <div class="section-title">
+    System Architecture — Complete BESS Topology
+    <span class="title-line"></span>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-color" style="background:var(--cyan)"></div>EMS Controller</div>
+    <div class="legend-item"><div class="legend-color" style="background:var(--green)"></div>BMS (CAN)</div>
+    <div class="legend-item"><div class="legend-color" style="background:var(--magenta)"></div>PCS (Modbus)</div>
+    <div class="legend-item"><div class="legend-color" style="background:var(--yellow)"></div>Cloud (MQTT)</div>
+    <div class="legend-item"><div class="legend-color" style="background:var(--orange)"></div>Grid / DG / Solar</div>
+    <div class="legend-item"><div class="legend-color" style="background:var(--red)"></div>Safety (GPIO)</div>
+    <div class="legend-item">● Animated dots = data flow direction &amp; load</div>
+  </div>
+
+  <div class="arch-canvas" id="overall-canvas">
+    <!-- SVG Connections drawn by JS -->
+    <svg class="connections-svg" id="overall-svg">
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+    </svg>
+
+    <!-- EMS Controller (Center) -->
+    <div class="node node-ems" id="n-ems" style="top:330px;left:calc(50% - 90px)" data-nav="software" data-tip="12 software modules • 5-layer stack • Click to view SW Architecture">
+      <div class="node-label">⬢ EMS Controller</div>
+      <div class="node-sub">ECU-1170-552A<br>4×A53 + 2×R5<br>12 SW Modules</div>
+      <div class="node-proto">Platform: Linux / POSIX</div>
+    </div>
+
+    <!-- BMS Cluster 1 -->
+    <div class="node node-bms" id="n-bms1" style="top:30px;left:3%" data-modal="modal-bms" data-tip="BMS Cluster 1 • CAN 2.0B/FD • L2: BMU→EMS">
+      <div class="node-label">BMS Cluster 1</div>
+      <div class="node-sub">Racks: 1–16<br>Modules: 3–20/rack<br>Cells: 16S–108S</div>
+      <div class="node-proto">CAN0 • DBC Layer 2</div>
+    </div>
+
+    <!-- BMS Cluster 2 -->
+    <div class="node node-bms" id="n-bms2" style="top:30px;left:25%" data-modal="modal-bms" data-tip="BMS Cluster 2 • CAN 2.0B/FD • L2: BMU→EMS">
+      <div class="node-label">BMS Cluster 2</div>
+      <div class="node-sub">Racks: 1–16<br>Modules: 3–20/rack<br>Cells: 16S–108S</div>
+      <div class="node-proto">CAN1 • DBC Layer 2</div>
+    </div>
+
+    <!-- BMS Cluster N -->
+    <div class="node node-bms" id="n-bmsn" style="top:30px;left:48%" data-modal="modal-bms" data-tip="BMS Clusters 3–8 • CAN FD / USB-CAN • Expandable">
+      <div class="node-label">BMS Cluster 3–8</div>
+      <div class="node-sub">CAN FD / USB-CAN<br>Auto-discovered</div>
+      <div class="node-proto">CAN2..N • Expansion</div>
+    </div>
+
+    <!-- PCS -->
+    <div class="node node-pcs" id="n-pcs" style="top:30px;left:76%" data-modal="modal-pcs" data-tip="Power Conversion System • Modbus RTU 9600/8N1 • V1.24 register map">
+      <div class="node-label">PCS</div>
+      <div class="node-sub">30kW – 2+ MW<br>On/Off Grid</div>
+      <div class="node-proto">RS485-1 • Modbus RTU</div>
+    </div>
+
+    <!-- Meter -->
+    <div class="node node-grid" id="n-meter" style="top:340px;left:84%" data-modal="modal-meter" data-tip="Energy Meter • Modbus RTU • Grid kW / kVAr / PF">
+      <div class="node-label">Meter</div>
+      <div class="node-sub">Grid / Load<br>kW, kVAr, PF</div>
+      <div class="node-proto">RS485-2 • Modbus RTU</div>
+    </div>
+
+    <!-- BTMS -->
+    <div class="node" id="n-btms" style="top:510px;left:80%" data-modal="modal-btms" data-tip="Battery Thermal Management • Modbus RTU • Cooling/Heating control">
+      <div class="node-label" style="color:var(--cyan)">BTMS</div>
+      <div class="node-sub">Cooling / Heating<br>Thermal Mgmt</div>
+      <div class="node-proto">RS485-3 • Modbus RTU</div>
+    </div>
+
+    <!-- DG -->
+    <div class="node node-grid" id="n-dg" style="top:660px;left:56%" data-modal="modal-dg" data-tip="Diesel Generator • Modbus RTU • Start/Stop • Backup source">
+      <div class="node-label">DG</div>
+      <div class="node-sub">Diesel Generator<br>Backup Source</div>
+      <div class="node-proto">RS485-4 • Modbus RTU</div>
+    </div>
+
+    <!-- Solar PV -->
+    <div class="node node-grid" id="n-solar" style="top:660px;left:33%" data-modal="modal-solar" data-tip="Solar PV Inverter • Modbus RTU • P1 source in DAY mode">
+      <div class="node-label">Solar PV</div>
+      <div class="node-sub">PV Inverter<br>DAY Priority 1</div>
+      <div class="node-proto">RS485-4 / Meter</div>
+    </div>
+
+    <!-- Grid / ACDB -->
+    <div class="node node-grid" id="n-grid" style="top:660px;left:8%" data-modal="modal-grid" data-tip="Grid via ACDB • DI-0 status • DO-0 shunt trip • Multi-source switching">
+      <div class="node-label">Grid / ACDB</div>
+      <div class="node-sub">3-Phase AC<br>DI-0 / DO-0</div>
+      <div class="node-proto">GPIO • Contactor</div>
+    </div>
+
+    <!-- FSS (Fire Safety) -->
+    <div class="node node-safety" id="n-fss" style="top:510px;left:1%" data-modal="modal-fss" data-tip="Fire Safety System • DI-3/DI-4 dual-confirm • DO-1 extinguisher • DO-6 siren">
+      <div class="node-label">FSS</div>
+      <div class="node-sub">Smoke + Heat<br>Dual Confirm</div>
+      <div class="node-proto">GPIO • DI-3,4 / DO-1,6</div>
+    </div>
+
+    <!-- E-Stop -->
+    <div class="node node-safety" id="n-estop" style="top:340px;left:1%" data-modal="modal-estop" data-tip="Emergency Stop • DI-6+DI-7 dual-channel • DO-5 PCS stop • DO-0 ACDB trip • <100ms">
+      <div class="node-label">E-STOP</div>
+      <div class="node-sub">Dual Channel<br>NO + NC</div>
+      <div class="node-proto">GPIO • DI-6,7 / DO-0,5</div>
+    </div>
+
+    <!-- Cloud -->
+    <div class="node node-cloud" id="n-cloud" style="top:160px;left:calc(50% - 60px)" data-modal="modal-cloud" data-tip="Cloud Platform • MQTT/TLS • Telemetry + Commands • Offline buffer">
+      <div class="node-label">Cloud</div>
+      <div class="node-sub">MQTT / TLS<br>Telemetry + Cmd</div>
+      <div class="node-proto">ETH1 • paho-mqtt</div>
+    </div>
+
+    <!-- HMI -->
+    <div class="node" id="n-hmi" style="top:175px;left:80%" data-modal="modal-hmi" data-tip="10″ Touchscreen HMI • 7 screens • FastAPI + React • WebSocket 1s push">
+      <div class="node-label" style="color:var(--orange)">HMI</div>
+      <div class="node-sub">10″ Touch • 7 Screens<br>React / FastAPI</div>
+      <div class="node-proto">HDMI + ETH0 / WS</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     TAB 2: SOFTWARE ARCHITECTURE
+     ═══════════════════════════════════════════ -->
+<section id="tab-software" class="tab-content">
+  <div class="section-title">
+    Software Architecture — 5-Layer Module Stack
+    <span class="title-line"></span>
+  </div>
+
+  <div class="sw-layers">
+    <!-- Layer 5: Application -->
+    <div class="sw-layer">
+      <div class="sw-layer-label"><span class="layer-num">L5</span> APPLICATION LAYER</div>
+      <div class="sw-modules">
+        <div class="sw-module" data-modal="modal-sw-control">
+          <div class="sw-module-name">control_manager</div>
+          <div class="sw-module-lang">Python • P0</div>
+          <div class="sw-module-desc">1Hz control loop: safety → source priority (Day/Night) → mode → algorithm → derate → PCS setpoints</div>
+        </div>
+        <div class="sw-module" data-modal="modal-sw-hmi">
+          <div class="sw-module-name">hmi_server</div>
+          <div class="sw-module-lang">Python + React • P1</div>
+          <div class="sw-module-desc">FastAPI + WebSocket. 7 screens. 1s telemetry push. Auth.</div>
+        </div>
+        <div class="sw-module" data-modal="modal-sw-cloud">
+          <div class="sw-module-name">cloud_manager</div>
+          <div class="sw-module-lang">Python • P1</div>
+          <div class="sw-module-desc">paho-mqtt async. MQTT TLS. Telemetry + commands. Offline buffer.</div>
+        </div>
+        <div class="sw-module" data-modal="modal-sw-diag">
+          <div class="sw-module-name">diagnostics</div>
+          <div class="sw-module-lang">Python • P2</div>
+          <div class="sw-module-desc">SOH trend, PCS efficiency, thermal analysis, comm health.</div>
+        </div>
+        <div class="sw-module" data-modal="modal-sw-ota">
+          <div class="sw-module-name">ota_manager</div>
+          <div class="sw-module-lang">Python • P2</div>
+          <div class="sw-module-desc">A/B partition, signature verification, rollback, downstream FW.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IPC Bar -->
+    <div class="sw-ipc-bar">◆ ZeroMQ PUB/SUB + REQ/REP — Inter-Module Communication ◆</div>
+
+    <!-- Layer 4: Data -->
+    <div class="sw-layer">
+      <div class="sw-layer-label"><span class="layer-num">L4</span> DATA LAYER</div>
+      <div class="sw-modules">
+        <div class="sw-module" data-modal="modal-sw-data">
+          <div class="sw-module-name">data_manager</div>
+          <div class="sw-module-lang">C / Python • P0</div>
+          <div class="sw-module-desc">POSIX shared memory RTDB. Auto-sized for 16S–108S topology. ZMQ pub on change.</div>
+        </div>
+        <div class="sw-module" data-modal="modal-sw-config">
+          <div class="sw-module-name">config_manager</div>
+          <div class="sw-module-lang">Python • P2</div>
+          <div class="sw-module-desc">YAML/JSON config. Schema validation. Versioned. Backup/restore. Hot-reload support.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IPC Bar -->
+    <div class="sw-ipc-bar">◆ POSIX Shared Memory (shm_open / mmap) — Real-Time Data Bus ◆</div>
+
+    <!-- Layer 3: Service -->
+    <div class="sw-layer">
+      <div class="sw-layer-label"><span class="layer-num">L3</span> SERVICE LAYER</div>
+      <div class="sw-modules">
+        <div class="sw-module" data-modal="modal-sw-alarm">
+          <div class="sw-module-name">alarm_manager</div>
+          <div class="sw-module-lang">Python • P0</div>
+          <div class="sw-module-desc">3-tier (E_W / A_P / P_P) per IEC 62682. Maps to DO-2/3/4 indicators.</div>
+        </div>
+        <div class="sw-module" data-modal="modal-sw-safety">
+          <div class="sw-module-name">safety_manager</div>
+          <div class="sw-module-lang">C • P0</div>
+          <div class="sw-module-desc">E-Stop, Fire, Flood. &lt;100ms response. Hardware watchdog. Isolated process.</div>
+        </div>
+        <div class="sw-module" data-modal="modal-sw-logger">
+          <div class="sw-module-name">logger</div>
+          <div class="sw-module-lang">C++ / Python • P1</div>
+          <div class="sw-module-desc">Parquet 1Hz. DuckDB query. JSONL events. Configurable retention (90-day).</div>
+        </div>
+        <div class="sw-module" data-modal="modal-sw-scheduler">
+          <div class="sw-module-name">scheduler</div>
+          <div class="sw-module-lang">Python • P1</div>
+          <div class="sw-module-desc">Charge/discharge windows. 96-point curves. Hot-reload.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IPC Bar -->
+    <div class="sw-ipc-bar">◆ ZeroMQ PUB/SUB — Event Bus (Alarms, State Changes) ◆</div>
+
+    <!-- Layer 2: Communication -->
+    <div class="sw-layer">
+      <div class="sw-layer-label"><span class="layer-num">L2</span> COMMUNICATION LAYER</div>
+      <div class="sw-modules">
+        <div class="sw-module" data-modal="modal-sw-comm" style="flex:3">
+          <div class="sw-module-name">comm_manager</div>
+          <div class="sw-module-lang">C (CAN) + Python (Modbus) • P0</div>
+          <div class="sw-module-desc">Hybrid: C thread per cluster for SocketCAN RX/decode/RTDB write. Python orchestrator for Modbus RTU/TCP, lifecycle, health monitoring.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IPC Bar -->
+    <div class="sw-ipc-bar">◆ Linux Kernel — SocketCAN / TTY / GPIO / Network ◆</div>
+
+    <!-- Layer 1: Platform -->
+    <div class="sw-layer">
+      <div class="sw-layer-label"><span class="layer-num">L1</span> PLATFORM LAYER</div>
+      <div class="sw-modules">
+        <div class="sw-module" data-modal="modal-sw-platform">
+          <div class="sw-module-name">Linux (Yocto / Ubuntu)</div>
+          <div class="sw-module-lang">Kernel • System</div>
+          <div class="sw-module-desc">SocketCAN, libgpiod, POSIX IPC, systemd, NTP, watchdog. TI AM6548 BSP.</div>
+        </div>
+        <div class="sw-module" data-modal="modal-sw-platform">
+          <div class="sw-module-name">POSIX shm + pthreads</div>
+          <div class="sw-module-lang">C • System</div>
+          <div class="sw-module-desc">shm_open, mmap for RTDB. RT priority threads for safety_manager.</div>
+        </div>
+        <div class="sw-module" data-modal="modal-sw-platform">
+          <div class="sw-module-name">libzmq</div>
+          <div class="sw-module-lang">C • IPC</div>
+          <div class="sw-module-desc">ZeroMQ message queues for all inter-module communication.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     TAB 3: HARDWARE ARCHITECTURE
+     ═══════════════════════════════════════════ -->
+<section id="tab-hardware" class="tab-content">
+  <div class="section-title">
+    Hardware Architecture — ECU-1170-552A Physical Interfaces
+    <span class="title-line"></span>
+  </div>
+
+  <div class="hw-layout">
+    <!-- Controller specs -->
+    <div class="hw-controller">
+      <div class="hw-controller-title">ADVANTECH ECU-1170-552A</div>
+      <div class="hw-specs">
+        <div class="hw-spec"><div class="hw-spec-label">Processor</div><div class="hw-spec-value">TI AM6548: 4×A53 @1GHz + 2×R5</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">RAM</div><div class="hw-spec-value">4 GB DDR4</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">Storage (OS)</div><div class="hw-spec-value">64 GB eMMC</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">Storage (Logs)</div><div class="hw-spec-value">256–512 GB SSD</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">CAN</div><div class="hw-spec-value">2× CAN 2.0B (isolated)</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">Serial</div><div class="hw-spec-value">4× RS-485 (isolated)</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">Ethernet</div><div class="hw-spec-value">2× GbE</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">Digital I/O</div><div class="hw-spec-value">8 DI + 8 DO (optocoupled)</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">Display</div><div class="hw-spec-value">HDMI → 10″ touch (1024×600)</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">Temp Range</div><div class="hw-spec-value">−40°C to +70°C</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">Certs</div><div class="hw-spec-value">CE, FCC, UL, IEC 61010</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">CPU Cores (EMS)</div><div class="hw-spec-value">A53: EMS application</div></div>
+        <div class="hw-spec"><div class="hw-spec-label">CPU Cores (Safety)</div><div class="hw-spec-value">R5: safety_manager</div></div>
+      </div>
+    </div>
+
+    <!-- Interfaces -->
+    <div class="hw-interfaces">
+      <div class="hw-iface hw-iface-can" data-modal="modal-hw-can">
+        <div class="hw-iface-title">CAN0 — BMS CLUSTER 1</div>
+        <div class="hw-iface-detail">
+          Protocol: CAN 2.0B / DBC Layer 2<br>
+          Device: Cluster 1 BMU<br>
+          Config: can_interface, bitrate, dbc_file<br>
+          Bitrate: 250k / 500k
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+
+      <div class="hw-iface hw-iface-can" data-modal="modal-hw-can">
+        <div class="hw-iface-title">CAN1 — BMS CLUSTER 2</div>
+        <div class="hw-iface-detail">
+          Protocol: CAN 2.0B / DBC Layer 2<br>
+          Device: Cluster 2 BMU<br>
+          Config: can_interface, bitrate, dbc_file<br>
+          Bitrate: 250k / 500k
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+
+      <div class="hw-iface hw-iface-can" data-modal="modal-hw-can">
+        <div class="hw-iface-title">CAN2..N — EXPANSION (USB-CAN)</div>
+        <div class="hw-iface-detail">
+          Protocol: CAN FD via USB-CAN adapters<br>
+          Device: Clusters 3–8+ BMUs<br>
+          Auto-discovered on enumeration
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+
+      <div class="hw-iface hw-iface-rs485" data-modal="modal-hw-rs485">
+        <div class="hw-iface-title">RS485-1 — PCS</div>
+        <div class="hw-iface-detail">
+          Protocol: Modbus RTU 9600/8N1<br>
+          Registers: V1.24 (0x5000–0x6050+)<br>
+          Config: slave_id, baud, register_map
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+
+      <div class="hw-iface hw-iface-rs485" data-modal="modal-hw-rs485">
+        <div class="hw-iface-title">RS485-2 — ENERGY METER</div>
+        <div class="hw-iface-detail">
+          Protocol: Modbus RTU<br>
+          Data: kW, kVAr, kVA, PF, V, I<br>
+          Config: slave_id, baud, register_map
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+
+      <div class="hw-iface hw-iface-rs485" data-modal="modal-hw-rs485">
+        <div class="hw-iface-title">RS485-3 — BTMS</div>
+        <div class="hw-iface-detail">
+          Protocol: Modbus RTU<br>
+          Device: Battery Thermal Management<br>
+          Config: slave_id, baud
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+
+      <div class="hw-iface hw-iface-rs485" data-modal="modal-hw-rs485">
+        <div class="hw-iface-title">RS485-4 — DG / PV INVERTER</div>
+        <div class="hw-iface-detail">
+          Protocol: Modbus RTU<br>
+          Device: Diesel Generator / Solar PV<br>
+          Config: slave_id, baud
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+
+      <div class="hw-iface hw-iface-eth" data-modal="modal-hw-eth">
+        <div class="hw-iface-title">ETH0 — LAN (PCS TCP + HMI)</div>
+        <div class="hw-iface-detail">
+          PCS: Modbus TCP, port 502<br>
+          HMI: HTTP/WebSocket<br>
+          Config: pcs_ip, port
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+
+      <div class="hw-iface hw-iface-eth" data-modal="modal-hw-eth">
+        <div class="hw-iface-title">ETH1 — WAN (CLOUD + NTP)</div>
+        <div class="hw-iface-detail">
+          Cloud: MQTT/TLS<br>
+          NTP: Time sync<br>
+          Config: broker_url
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+
+      <div class="hw-iface hw-iface-gpio" data-modal="modal-hw-gpio-di">
+        <div class="hw-iface-title">DIGITAL INPUTS (DI 0–7)</div>
+        <div class="hw-iface-detail">
+          DI-0: ACDB Status<br>
+          DI-1: Flood Sensor | DI-2: Limit Switch<br>
+          DI-3: Smoke | DI-4: Heat Detector<br>
+          DI-5: Fire Ext. | DI-6/7: E-Stop (dual)
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+
+      <div class="hw-iface hw-iface-gpio" data-modal="modal-hw-gpio-do">
+        <div class="hw-iface-title">DIGITAL OUTPUTS (DO 0–7)</div>
+        <div class="hw-iface-detail">
+          DO-0: ACDB Trip | DO-1: Fire Ext. Drive<br>
+          DO-2: Warning | DO-3: Running | DO-4: Fault<br>
+          DO-5: PCS E-Stop | DO-6: Siren<br>
+          DO-7: Reserved
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+
+      <div class="hw-iface hw-iface-hdmi" data-modal="modal-hmi">
+        <div class="hw-iface-title">HDMI — 10″ HMI DISPLAY</div>
+        <div class="hw-iface-detail">
+          Resolution: 1024×600<br>
+          Touch: Capacitive<br>
+          7 screens • Dark green theme
+        </div>
+        <div class="flow-stripe"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     TAB 4: REQUIREMENTS SPECIFICATION
+     ═══════════════════════════════════════════ -->
+<section id="tab-requirements" class="tab-content">
+  <div class="section-title">
+    Requirement Specification — Claude Code Instructions
+    <span class="title-line"></span>
+  </div>
+
+  <div class="req-container">
+    <div class="req-toolbar">
+      <button id="btn-edit" class="active" onclick="setReqMode('edit')">✎ EDIT</button>
+      <button id="btn-preview" onclick="setReqMode('preview')">◉ PREVIEW</button>
+      <button onclick="downloadReqMd()">↓ EXPORT .MD</button>
+      <span style="flex:1"></span>
+      <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim)" id="req-char-count">0 chars</span>
+    </div>
+
+    <textarea id="req-editor" spellcheck="false"></textarea>
+    <div id="req-preview" style="display:none"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     MODAL OVERLAY (reusable)
+     ═══════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">—</h2>
+      <button class="modal-close" onclick="closeModal()">✕ ESC</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TOOLTIP
+     ═══════════════════════════════════════════ -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════ -->
+<script>
+// ─── TAB NAVIGATION ──────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'overall') requestAnimationFrame(drawOverallConnections);
+  });
+});
+
+// ─── NODE CLICK → NAV or MODAL ──────────────
+document.querySelectorAll('.node').forEach(node => {
+  node.addEventListener('click', () => {
+    if (node.dataset.nav) {
+      // Navigate to another tab
+      const tabName = node.dataset.nav;
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.tab === tabName);
+      });
+      document.querySelectorAll('.tab-content').forEach(c => {
+        c.classList.toggle('active', c.id === 'tab-' + tabName);
+      });
+    } else if (node.dataset.modal) {
+      openModal(node.dataset.modal);
+    }
+  });
+});
+
+// SW modules click
+document.querySelectorAll('.sw-module').forEach(mod => {
+  mod.addEventListener('click', () => {
+    if (mod.dataset.modal) openModal(mod.dataset.modal);
+  });
+});
+
+// HW interface click
+document.querySelectorAll('.hw-iface').forEach(iface => {
+  iface.addEventListener('click', () => {
+    if (iface.dataset.modal) openModal(iface.dataset.modal);
+  });
+});
+
+// ─── TOOLTIP ─────────────────────────────────
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('[data-tip]').forEach(el => {
+  el.addEventListener('mouseenter', e => {
+    tooltip.textContent = el.dataset.tip;
+    tooltip.classList.add('visible');
+  });
+  el.addEventListener('mousemove', e => {
+    tooltip.style.left = (e.clientX + 12) + 'px';
+    tooltip.style.top = (e.clientY - 30) + 'px';
+  });
+  el.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('visible');
+  });
+});
+
+// ─── MODAL SYSTEM ────────────────────────────
+const modalData = {
+  'modal-bms': {
+    title: 'BMS — Battery Management System',
+    body: `<table>
+      <tr><th>Parameter</th><th>Value</th><th>Config Key</th></tr>
+      <tr><td>Protocol</td><td>CAN 2.0B / CAN FD</td><td>bms_config.yaml</td></tr>
+      <tr><td>Architecture</td><td>2-Layer: L1 (LMU→BMU) + L2 (BMU→EMS)</td><td>dbc_file</td></tr>
+      <tr><td>Cells/Module</td><td>16S – 108S</td><td>cells_per_module</td></tr>
+      <tr><td>Modules/Rack</td><td>3 – 20</td><td>modules_per_rack</td></tr>
+      <tr><td>Racks/Cluster</td><td>1 – 16</td><td>racks_per_cluster</td></tr>
+      <tr><td>Clusters</td><td>1 – 8+</td><td>cluster_count</td></tr>
+      <tr><td>SOC Message</td><td>0x98FF0003, 300ms</td><td>DBC Layer 2</td></tr>
+      <tr><td>Pack V/I</td><td>0x98FF0103, 300ms</td><td>DBC Layer 2</td></tr>
+      <tr><td>Cell Voltages</td><td>0x98FF2003–3B03, 2000ms</td><td>DBC Layer 2</td></tr>
+      <tr><td>Cell Temps</td><td>0x98FF8003–8903, 2000ms</td><td>DBC Layer 2</td></tr>
+      </table>
+      <p style="margin-top:0.8rem;font-size:0.7rem;color:var(--text-dim)">
+        <span class="tech-tag tech-tag-c">C</span>
+        <span class="tech-tag tech-tag-lib">python-can ≥4.0</span>
+        <span class="tech-tag tech-tag-lib">cantools ≥38.0</span>
+        <span class="tech-tag tech-tag-proto">SocketCAN</span>
+      </p>`
+  },
+  'modal-pcs': {
+    title: 'PCS — Power Conversion System',
+    body: `<table>
+      <tr><th>Parameter</th><th>Value</th><th>Register</th></tr>
+      <tr><td>Protocol</td><td>Modbus RTU 9600/8N1</td><td>RS485-1</td></tr>
+      <tr><td>Active Power Setpoint</td><td>kW×10 (+dchg/−chg)</td><td>0x500E</td></tr>
+      <tr><td>Reactive Power</td><td>kVAr×10</td><td>0x500F</td></tr>
+      <tr><td>Power On/Off</td><td>1=ON, 0=OFF (wait 10s)</td><td>0x0291</td></tr>
+      <tr><td>Fault Reset</td><td>Write 1</td><td>0x5064</td></tr>
+      <tr><td>Off-Grid Mode</td><td>1=off-grid</td><td>0x5066</td></tr>
+      <tr><td>AC Voltages</td><td>V×10 (3-phase)</td><td>0x6020–6025</td></tr>
+      <tr><td>AC Currents</td><td>A×10 (3-phase)</td><td>0x6026–6028</td></tr>
+      <tr><td>Total P/Q/S</td><td>kW/kVAr/kVA×10</td><td>0x6039–603B</td></tr>
+      <tr><td>Fault Words</td><td>8 registers</td><td>0x1700–0x1707</td></tr>
+      </table>
+      <p style="margin-top:0.8rem;font-size:0.7rem;color:var(--text-dim)">
+        <span class="tech-tag tech-tag-py">Python</span>
+        <span class="tech-tag tech-tag-lib">pymodbus ≥3.5</span>
+        <span class="tech-tag tech-tag-proto">Modbus RTU/TCP</span>
+      </p>`
+  },
+  'modal-meter': {
+    title: 'Energy Meter',
+    body: `<table>
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Protocol</td><td>Modbus RTU</td></tr>
+      <tr><td>Interface</td><td>RS485-2</td></tr>
+      <tr><td>Data</td><td>kW, kVAr, kVA, PF, V, I per phase</td></tr>
+      <tr><td>Config</td><td>devices_config.yaml → slave_id, baud, register_map</td></tr>
+      </table>`
+  },
+  'modal-btms': {
+    title: 'BTMS — Battery Thermal Management',
+    body: `<table>
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Protocol</td><td>Modbus RTU</td></tr>
+      <tr><td>Interface</td><td>RS485-3</td></tr>
+      <tr><td>Function</td><td>Cooling/Heating control based on cell temperatures</td></tr>
+      <tr><td>Escalation</td><td>Triggered by DI-4 (Heat) or cell temp thresholds</td></tr>
+      </table>`
+  },
+  'modal-dg': {
+    title: 'DG — Diesel Generator',
+    body: `<table>
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Protocol</td><td>Modbus RTU</td></tr>
+      <tr><td>Interface</td><td>RS485-4</td></tr>
+      <tr><td>Control</td><td>Start/Stop via Modbus commands</td></tr>
+      <tr><td>Priority</td><td>Last resort in both DAY and NIGHT modes</td></tr>
+      <tr><td>Source Manager</td><td>Controlled by control_manager source priority logic</td></tr>
+      </table>`
+  },
+  'modal-solar': {
+    title: 'Solar PV',
+    body: `<table>
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Protocol</td><td>Modbus RTU (via Meter or direct)</td></tr>
+      <tr><td>Interface</td><td>RS485-4 / Meter</td></tr>
+      <tr><td>Priority (DAY)</td><td>P1 — Highest priority source</td></tr>
+      <tr><td>Priority (NIGHT)</td><td>N/A — Unavailable</td></tr>
+      <tr><td>Day/Night Detection</td><td>Configurable sunrise/sunset or irradiance threshold</td></tr>
+      </table>`
+  },
+  'modal-grid': {
+    title: 'Grid / ACDB',
+    body: `<table>
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Status Input</td><td>DI-0 (High = Closed / Grid Connected)</td></tr>
+      <tr><td>Trip Output</td><td>DO-0 (High = Shunt Trip / Disconnect)</td></tr>
+      <tr><td>Priority (DAY)</td><td>P2 (after Solar)</td></tr>
+      <tr><td>Priority (NIGHT)</td><td>P1 — Primary source</td></tr>
+      <tr><td>Transfer</td><td>Seamless with configurable overlap/ramp times</td></tr>
+      </table>`
+  },
+  'modal-fss': {
+    title: 'FSS — Fire Safety System',
+    body: `<table>
+      <tr><th>Signal</th><th>I/O</th><th>Function</th></tr>
+      <tr><td>Smoke Sensor</td><td>DI-3</td><td>High = Smoke detected</td></tr>
+      <tr><td>Heat Detector</td><td>DI-4</td><td>High = Thermal anomaly</td></tr>
+      <tr><td>Fire Ext. Feedback</td><td>DI-5</td><td>High = Discharged</td></tr>
+      <tr><td>Fire Ext. Drive</td><td>DO-1</td><td>Activate suppression</td></tr>
+      <tr><td>PCS E-Stop</td><td>DO-5</td><td>Emergency shutdown PCS</td></tr>
+      <tr><td>ACDB Trip</td><td>DO-0</td><td>Disconnect grid</td></tr>
+      <tr><td>Siren</td><td>DO-6</td><td>Audible alarm</td></tr>
+      </table>
+      <p style="margin-top:0.5rem;font-size:0.7rem;color:var(--red)">⚠ Dual-confirmation: Smoke AND Heat must both trigger (DI-3 + DI-4)</p>`
+  },
+  'modal-estop': {
+    title: 'E-STOP — Emergency Shutdown',
+    body: `<table>
+      <tr><th>Signal</th><th>I/O</th><th>Function</th></tr>
+      <tr><td>EM OFF PB (NO)</td><td>DI-6</td><td>Rising edge triggers</td></tr>
+      <tr><td>EM OFF PB (NC)</td><td>DI-7</td><td>Falling edge confirms</td></tr>
+      <tr><td>PCS E-Stop</td><td>DO-5</td><td>Hardware PCS shutdown</td></tr>
+      <tr><td>ACDB Trip</td><td>DO-0</td><td>Grid disconnect</td></tr>
+      <tr><td>Siren</td><td>DO-6</td><td>Audible alarm</td></tr>
+      <tr><td>Fault Indicator</td><td>DO-4</td><td>Red lamp ON</td></tr>
+      </table>
+      <p style="margin-top:0.5rem;font-size:0.7rem;color:var(--red)">⚠ Dual-channel: DI-6 rises AND DI-7 falls. Safety Manager &lt;100ms via GPIO interrupt.</p>
+      <p style="font-size:0.7rem;color:var(--text-dim)">Recovery: Physical reset + Operator ACK + Manual restart</p>`
+  },
+  'modal-cloud': {
+    title: 'Cloud Platform',
+    body: `<table>
+      <tr><th>Parameter</th><th>Value</th></tr>
+      <tr><td>Protocol</td><td>MQTT / TLS</td></tr>
+      <tr><td>Interface</td><td>ETH1 (WAN)</td></tr>
+      <tr><td>Library</td><td>paho-mqtt ≥1.6 (async)</td></tr>
+      <tr><td>Functions</td><td>Telemetry upload, Remote commands, OTA triggers</td></tr>
+      <tr><td>Offline</td><td>Buffer & forward when connectivity restored</td></tr>
+      <tr><td>Security</td><td>TLS, X.509 certificates</td></tr>
+      <tr><td>Config</td><td>cloud_config.yaml → broker_url, topic_prefix, auth</td></tr>
+      </table>`
+  },
+  'modal-hmi': {
+    title: 'HMI — Human Machine Interface',
+    body: `<table>
+      <tr><th>#</th><th>Screen</th><th>Key Data</th><th>Refresh</th></tr>
+      <tr><td>1</td><td>Dashboard</td><td>Grid/Solar/Battery kW, SOC, Source Priority</td><td>1s</td></tr>
+      <tr><td>2</td><td>Cluster Overview</td><td>Cluster V/I, Per-rack SOC/SOH cards</td><td>1s</td></tr>
+      <tr><td>3</td><td>Rack List+Detail</td><td>Pack V/I, BMS State, Cell V, SOH</td><td>1s</td></tr>
+      <tr><td>4</td><td>Cell Details</td><td>Per-cell V/T grid (16S–108S × 3–20 mod)</td><td>500ms</td></tr>
+      <tr><td>5</td><td>Alarms</td><td>Active/Cleared/NACK, Filters, ACK</td><td>Event</td></tr>
+      <tr><td>6</td><td>Settings–Mode</td><td>Schedule, On/Off Grid, Source priority</td><td>On-demand</td></tr>
+      <tr><td>7</td><td>Settings–System</td><td>CAN IDs, RS485, IP, DI/DO live status</td><td>On-demand</td></tr>
+      </table>
+      <p style="margin-top:0.8rem;font-size:0.7rem;color:var(--text-dim)">
+        <span class="tech-tag tech-tag-py">FastAPI</span>
+        <span class="tech-tag tech-tag-lib">React.js 18</span>
+        <span class="tech-tag tech-tag-lib">Chart.js</span>
+        <span class="tech-tag tech-tag-lib">TailwindCSS</span>
+        <span class="tech-tag tech-tag-proto">WebSocket</span>
+      </p>`
+  },
+  // Software module modals
+  'modal-sw-control': {
+    title: 'control_manager — Control Loop',
+    body: `<table>
+      <tr><th>Property</th><th>Detail</th></tr>
+      <tr><td>Language</td><td>Python (1Hz has 7700x headroom at ~130µs/cycle)</td></tr>
+      <tr><td>Priority</td><td>P0 (Critical)</td></tr>
+      <tr><td>Loop Rate</td><td>1 Hz</td></tr>
+      <tr><td>Pipeline</td><td>RTDB → Safety check → Source Priority (Day/Night) → Mode select → Algorithm → Derating → PCS setpoint</td></tr>
+      <tr><td>Algorithms</td><td>SOC Dispatch, Peak Shaving, Schedule Exec, 96-Point Curve, Power Derating, Multi-Rack Balance, Reactive Q</td></tr>
+      <tr><td>PCS Registers</td><td>0x0291 (On/Off), 0x500E (Active P), 0x500F (Reactive Q), 0x5066 (Off-grid)</td></tr>
+      <tr><td>Override</td><td>Source priority overrides persist to control_config.yaml (survives reboot)</td></tr>
+      <tr><td>Config</td><td>control_config.yaml (hot-reload: Yes)</td></tr>
+      </table>`
+  },
+  'modal-sw-comm': {
+    title: 'comm_manager — Protocol Driver',
+    body: `<table>
+      <tr><th>Property</th><th>Detail</th></tr>
+      <tr><td>Language</td><td>Hybrid: C threads (CAN RX/decode/RTDB write) + Python (Modbus, lifecycle, orchestration)</td></tr>
+      <tr><td>Priority</td><td>P0 (Critical)</td></tr>
+      <tr><td>CAN</td><td>C SocketCAN thread per cluster. One physical CAN bus per cluster (no shared bus). cantools DBC L2 decode</td></tr>
+      <tr><td>Modbus</td><td>pymodbus async — RTU primary (RS485 9600/8N1), TCP as config option. ~500ms poll cycle</td></tr>
+      <tr><td>GPIO</td><td>Handled by safety_manager (libgpiod), not comm_manager</td></tr>
+      <tr><td>Device Registry</td><td>Health monitoring, heartbeat timeout (default 900ms = 3× CAN cycle)</td></tr>
+      <tr><td>Output</td><td>CAN thread writes directly to RTDB (POSIX shm) via seqlock. Publishes change events via ZMQ PUB</td></tr>
+      </table>`
+  },
+  'modal-sw-data': {
+    title: 'data_manager — RTDB',
+    body: `<table>
+      <tr><th>Property</th><th>Detail</th></tr>
+      <tr><td>Language</td><td>C (shm create + struct definition) / Python (ctypes mirror)</td></tr>
+      <tr><td>Mechanism</td><td>POSIX shared memory (shm_open, mmap). Fixed-size hierarchical struct (~800KB max)</td></tr>
+      <tr><td>Role</td><td>Creates shm segment at startup only. Does NOT mediate reads/writes — writers go direct</td></tr>
+      <tr><td>Concurrency</td><td>Seqlock per-rack (_Atomic uint32_t seq). Zero reader blocking, crash-safe</td></tr>
+      <tr><td>Serialization</td><td>MessagePack (mpack C / msgpack Python) for ZMQ event payloads</td></tr>
+      <tr><td>Namespace</td><td>/bms/cluster[C]/rack[R]/module[M]/cell_voltage[K]</td></tr>
+      <tr><td>Auto-sizing</td><td>Topology from system_config.yaml → 16S–108S cells, 3–20 modules</td></tr>
+      <tr><td>Data Points</td><td>~200 (small) to ~100,000+ (large container)</td></tr>
+      </table>`
+  },
+  'modal-sw-safety': {
+    title: 'safety_manager — Safety-Critical',
+    body: `<table>
+      <tr><th>Property</th><th>Detail</th></tr>
+      <tr><td>Language</td><td>C (isolated process)</td></tr>
+      <tr><td>Priority</td><td>P0 (Critical)</td></tr>
+      <tr><td>Response</td><td>&lt;100ms via GPIO interrupt</td></tr>
+      <tr><td>E-Stop</td><td>DI-6+DI-7 → DO-0 (ACDB) + DO-5 (PCS) + DO-6 (Siren)</td></tr>
+      <tr><td>Fire</td><td>DI-3+DI-4 → DO-1 (Extinguisher) + DO-5 + DO-0 + DO-6</td></tr>
+      <tr><td>Watchdog</td><td>/dev/watchdog, 500ms kick interval</td></tr>
+      <tr><td>CPU Core</td><td>A53 Linux process (v1). R5 bare-metal deferred to v2+</td></tr>
+      <tr><td>Standards</td><td>ISO 26262 ASIL-B / IEC 61508 SIL-2 — deferred to v2+ ("proven in use" for v1)</td></tr>
+      </table>`
+  },
+  'modal-sw-alarm': {
+    title: 'alarm_manager — 3-Tier Alarms',
+    body: `<table>
+      <tr><th>Tier</th><th>Code</th><th>Output</th><th>Action</th></tr>
+      <tr><td>Early Warning</td><td>E_W</td><td>DO-2 (Yellow)</td><td>Log, notify</td></tr>
+      <tr><td>Alarm / Protection</td><td>A_P</td><td>DO-4 (Red)</td><td>Log, derate, alert</td></tr>
+      <tr><td>Protection / Shutdown</td><td>P_P</td><td>DO-4 (Red) + DO-6 (Siren)</td><td>Trip, shutdown</td></tr>
+      </table>
+      <p style="margin-top:0.5rem;font-size:0.7rem;color:var(--text-dim)">Per IEC 62682. Config: alarms_config.yaml (hot-reload: Yes). Per-signal thresholds, hysteresis, delay.</p>`
+  },
+  'modal-sw-logger': {
+    title: 'logger — Data Logging',
+    body: `<table>
+      <tr><th>Property</th><th>Detail</th></tr>
+      <tr><td>Language</td><td>C++ / Python</td></tr>
+      <tr><td>Telemetry</td><td>Parquet files (1Hz, hourly rotation). Columnar compression 5–10x</td></tr>
+      <tr><td>Events</td><td>JSONL files (daily). Alarms, faults, E-Stop, state changes</td></tr>
+      <tr><td>Query</td><td>DuckDB SQL on Parquet files (zero-config analytics)</td></tr>
+      <tr><td>Ingestion</td><td>ZMQ PUSH/PULL from all modules</td></tr>
+      <tr><td>Retention</td><td>Default 90 days. FIFO: delete oldest Parquet file when SSD &gt;80% full</td></tr>
+      <tr><td>Storage</td><td>~20 MB/day (small) to ~1.4 GB/day (large)</td></tr>
+      <tr><td>Libraries</td><td>pyarrow ≥14.0, duckdb ≥0.9</td></tr>
+      </table>`
+  },
+  'modal-sw-hmi': {
+    title: 'hmi_server — Web GUI',
+    body: `<table>
+      <tr><th>Property</th><th>Detail</th></tr>
+      <tr><td>Backend</td><td>FastAPI + uvicorn (ASGI)</td></tr>
+      <tr><td>Frontend</td><td>React.js 18 + Vite SPA (7 screens). No SSR, no Node.js in prod</td></tr>
+      <tr><td>Transport</td><td>WebSocket (1s telemetry push)</td></tr>
+      <tr><td>Display</td><td>10″ touch (1024×600) via HDMI — Chromium kiosk mode</td></tr>
+      <tr><td>Theme</td><td>Dark green, auto-scales 16S–108S</td></tr>
+      <tr><td>Auth</td><td>PIN-based: 4-digit operator PIN, separate admin PIN for settings</td></tr>
+      </table>`
+  },
+  'modal-sw-cloud': {
+    title: 'cloud_manager — MQTT',
+    body: `<table>
+      <tr><th>Property</th><th>Detail</th></tr>
+      <tr><td>Library</td><td>paho-mqtt ≥1.6 (async)</td></tr>
+      <tr><td>Protocol</td><td>MQTT / TLS</td></tr>
+      <tr><td>Broker</td><td>Default: Mosquitto (self-hosted). Cloud-managed TBD (⚠ external dep)</td></tr>
+      <tr><td>Telemetry</td><td>10s aggregated pack-level (⚠ granularity TBD per cloud architect)</td></tr>
+      <tr><td>Functions</td><td>Telemetry upload, Remote commands, Critical alerts</td></tr>
+      <tr><td>Offline</td><td>24h FIFO buffer (~50MB). Forward on reconnect (⚠ duration TBD per site)</td></tr>
+      <tr><td>Config</td><td>cloud_config.yaml → broker_url, topic_prefix, telemetry_interval</td></tr>
+      </table>
+      <p style="margin-top:0.5rem;font-size:0.7rem;color:var(--yellow)">⚠ 3 external dependencies pending: broker selection, telemetry granularity, offline duration</p>`
+  },
+  'modal-sw-scheduler': {
+    title: 'scheduler — Time-Based Control',
+    body: `<table>
+      <tr><th>Property</th><th>Detail</th></tr>
+      <tr><td>Language</td><td>Python</td></tr>
+      <tr><td>Functions</td><td>Charge/discharge windows, 96-point curves</td></tr>
+      <tr><td>Granularity</td><td>15-min interpolated (96 points per day)</td></tr>
+      <tr><td>Config</td><td>schedule_config.yaml (hot-reload: Yes)</td></tr>
+      </table>`
+  },
+  'modal-sw-config': {
+    title: 'config_manager — Configuration',
+    body: `<table>
+      <tr><th>File</th><th>Hot-Reload</th><th>Key Parameters</th></tr>
+      <tr><td>system_config.yaml</td><td>No</td><td>cluster_count, racks, modules (3–20), cells (16–108)</td></tr>
+      <tr><td>bms_config.yaml</td><td>No</td><td>can_interface, bitrate, dbc_file, heartbeat_timeout</td></tr>
+      <tr><td>pcs_config.yaml</td><td>No</td><td>protocol, port/baud, slave_id, register_map</td></tr>
+      <tr><td>control_config.yaml</td><td>Yes</td><td>soc_levels, derating, ramp_rate, source_priority</td></tr>
+      <tr><td>alarms_config.yaml</td><td>Yes</td><td>thresholds, hysteresis, delay per signal</td></tr>
+      <tr><td>schedule_config.yaml</td><td>Yes</td><td>charge/discharge windows, 96-pt curves</td></tr>
+      <tr><td>gpio_config.yaml</td><td>No</td><td>DI/DO pin map per Section 4</td></tr>
+      </table>`
+  },
+  'modal-sw-diag': {
+    title: 'diagnostics — Health Analysis',
+    body: `<table>
+      <tr><th>Property</th><th>Detail</th></tr>
+      <tr><td>Language</td><td>Python</td></tr>
+      <tr><td>Functions</td><td>SOH trending, PCS efficiency, thermal analysis, comm health</td></tr>
+      <tr><td>Libraries</td><td>numpy, duckdb (SQL on Parquet)</td></tr>
+      </table>`
+  },
+  'modal-sw-ota': {
+    title: 'ota_manager — Over-The-Air Updates',
+    body: `<table>
+      <tr><th>Property</th><th>Detail</th></tr>
+      <tr><td>Language</td><td>Python</td></tr>
+      <tr><td>Strategy</td><td>A/B partition with rollback</td></tr>
+      <tr><td>Security</td><td>Signature verification (cryptography ≥41.0)</td></tr>
+      <tr><td>Scope</td><td>EMS firmware + downstream FW updates</td></tr>
+      </table>`
+  },
+  'modal-sw-platform': {
+    title: 'Platform Layer — OS & Libraries',
+    body: `<table>
+      <tr><th>Component</th><th>Purpose</th></tr>
+      <tr><td>Linux (Yocto/Ubuntu)</td><td>Base OS with TI AM6548 BSP</td></tr>
+      <tr><td>SocketCAN</td><td>Linux CAN socket API for BMS comm</td></tr>
+      <tr><td>libgpiod</td><td>GPIO handler for DI/DO (Section 4)</td></tr>
+      <tr><td>POSIX shm</td><td>shm_open, mmap for RTDB shared memory</td></tr>
+      <tr><td>pthreads</td><td>RT threads for safety_manager, logger</td></tr>
+      <tr><td>libzmq</td><td>ZeroMQ IPC pub/sub for all modules</td></tr>
+      <tr><td>systemd</td><td>Service management, watchdog integration</td></tr>
+      <tr><td>NTP</td><td>Time synchronization via ETH1</td></tr>
+      </table>`
+  },
+  // Hardware modals
+  'modal-hw-can': {
+    title: 'CAN Bus Interfaces',
+    body: `<table>
+      <tr><th>Config</th><th>Cells/Rack</th><th>V Msgs</th><th>T Msgs</th><th>Frames/s (8 racks)</th><th>Bus Type</th></tr>
+      <tr><td>16S×3 mod</td><td>48</td><td>12</td><td>3</td><td>120</td><td>CAN 2.0B</td></tr>
+      <tr><td>32S×5 mod</td><td>160</td><td>40</td><td>5</td><td>360</td><td>CAN 2.0B</td></tr>
+      <tr><td>54S×10 mod</td><td>540</td><td>135</td><td>14</td><td>1,192</td><td>CAN FD</td></tr>
+      <tr><td>108S×20 mod</td><td>2,160</td><td>540</td><td>20</td><td>4,480</td><td>Multi FD/ETH</td></tr>
+      </table>`
+  },
+  'modal-hw-rs485': {
+    title: 'RS-485 Serial Interfaces',
+    body: `<table>
+      <tr><th>Port</th><th>Device</th><th>Protocol</th><th>Config</th></tr>
+      <tr><td>RS485-1</td><td>PCS</td><td>Modbus RTU 9600/8N1</td><td>slave_id, baud, register_map</td></tr>
+      <tr><td>RS485-2</td><td>Meter</td><td>Modbus RTU</td><td>slave_id, baud, register_map</td></tr>
+      <tr><td>RS485-3</td><td>BTMS</td><td>Modbus RTU</td><td>slave_id, baud</td></tr>
+      <tr><td>RS485-4</td><td>DG / PV</td><td>Modbus RTU</td><td>slave_id, baud</td></tr>
+      </table>`
+  },
+  'modal-hw-eth': {
+    title: 'Ethernet Interfaces',
+    body: `<table>
+      <tr><th>Port</th><th>Network</th><th>Protocols</th><th>Devices</th></tr>
+      <tr><td>ETH0</td><td>LAN</td><td>Modbus TCP (502), HTTP, WebSocket</td><td>PCS TCP, HMI</td></tr>
+      <tr><td>ETH1</td><td>WAN</td><td>MQTT/TLS, NTP</td><td>Cloud, Time server</td></tr>
+      </table>`
+  },
+  'modal-hw-gpio-di': {
+    title: 'Digital Inputs (DI 0–7)',
+    body: `<table>
+      <tr><th>DI #</th><th>Subsystem</th><th>Signal</th><th>Active State</th></tr>
+      <tr><td>DI-0</td><td>ACDB</td><td>Aux Status</td><td>High = Closed</td></tr>
+      <tr><td>DI-1</td><td>Flood Sensor</td><td>Status</td><td>High = Flood</td></tr>
+      <tr><td>DI-2</td><td>Limit Switch</td><td>Status</td><td>High = Open</td></tr>
+      <tr><td>DI-3</td><td>Smoke Sensor</td><td>Status</td><td>High = Smoke</td></tr>
+      <tr><td>DI-4</td><td>Heat Detector</td><td>Status</td><td>High = Heat</td></tr>
+      <tr><td>DI-5</td><td>Fire Extinguisher</td><td>Feedback</td><td>High = Discharged</td></tr>
+      <tr><td>DI-6</td><td>EM OFF PB</td><td>NO contact</td><td>High = Pressed</td></tr>
+      <tr><td>DI-7</td><td>EM OFF PB</td><td>NC contact</td><td>Low = Pressed</td></tr>
+      </table>`
+  },
+  'modal-hw-gpio-do': {
+    title: 'Digital Outputs (DO 0–7)',
+    body: `<table>
+      <tr><th>DO #</th><th>Subsystem</th><th>Signal</th><th>Active State</th></tr>
+      <tr><td>DO-0</td><td>ACDB</td><td>Shunt Trip</td><td>High = Trip</td></tr>
+      <tr><td>DO-1</td><td>Fire Extinguisher</td><td>Drive</td><td>High = Activate</td></tr>
+      <tr><td>DO-2</td><td>Warning Indicator</td><td>Drive</td><td>High = ON (Yellow)</td></tr>
+      <tr><td>DO-3</td><td>Running Indicator</td><td>Drive</td><td>High = ON (Green)</td></tr>
+      <tr><td>DO-4</td><td>Fault Indicator</td><td>Drive</td><td>High = ON (Red)</td></tr>
+      <tr><td>DO-5</td><td>PCS</td><td>Em Stop</td><td>High = Stop</td></tr>
+      <tr><td>DO-6</td><td>Siren</td><td>Drive</td><td>High = ON</td></tr>
+      <tr><td>DO-7</td><td>Reserved</td><td>—</td><td>Spare</td></tr>
+      </table>`
+  }
+};
+
+function openModal(id) {
+  const data = modalData[id];
+  if (!data) return;
+  document.getElementById('modal-title').textContent = data.title;
+  document.getElementById('modal-body').innerHTML = data.body;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ─── OVERALL ARCHITECTURE — SVG CONNECTIONS + PARTICLES ──────
+function getNodeCenter(id) {
+  const el = document.getElementById(id);
+  const canvas = document.getElementById('overall-canvas');
+  if (!el || !canvas) return { x: 0, y: 0 };
+  const cr = canvas.getBoundingClientRect();
+  const nr = el.getBoundingClientRect();
+  return {
+    x: nr.left - cr.left + nr.width / 2,
+    y: nr.top - cr.top + nr.height / 2
+  };
+}
+
+const connections = [
+  { from: 'n-bms1', to: 'n-ems', color: 'green', speed: 2.5, particles: 4 },
+  { from: 'n-bms2', to: 'n-ems', color: 'green', speed: 2.5, particles: 4 },
+  { from: 'n-bmsn', to: 'n-ems', color: 'green', speed: 3, particles: 3 },
+  { from: 'n-ems', to: 'n-pcs', color: 'magenta', speed: 2, particles: 5 },
+  { from: 'n-ems', to: 'n-meter', color: 'orange', speed: 3, particles: 3 },
+  { from: 'n-ems', to: 'n-btms', color: 'cyan', speed: 4, particles: 2 },
+  { from: 'n-ems', to: 'n-dg', color: 'orange', speed: 5, particles: 2 },
+  { from: 'n-ems', to: 'n-solar', color: 'orange', speed: 3.5, particles: 3 },
+  { from: 'n-ems', to: 'n-grid', color: 'orange', speed: 3, particles: 3 },
+  { from: 'n-ems', to: 'n-fss', color: 'red', speed: 1.5, particles: 3 },
+  { from: 'n-estop', to: 'n-ems', color: 'red', speed: 1, particles: 5 },
+  { from: 'n-ems', to: 'n-cloud', color: 'yellow', speed: 3, particles: 3 },
+  { from: 'n-ems', to: 'n-hmi', color: 'cyan', speed: 2, particles: 4 },
+];
+
+function drawOverallConnections() {
+  const svg = document.getElementById('overall-svg');
+  // Set SVG size to canvas
+  const canvas = document.getElementById('overall-canvas');
+  svg.setAttribute('width', canvas.offsetWidth);
+  svg.setAttribute('height', canvas.offsetHeight);
+
+  // Clear existing (keep defs)
+  const defs = svg.querySelector('defs');
+  svg.innerHTML = '';
+  svg.appendChild(defs);
+
+  connections.forEach((conn, idx) => {
+    const from = getNodeCenter(conn.from);
+    const to = getNodeCenter(conn.to);
+
+    // Curved path
+    const mx = (from.x + to.x) / 2;
+    const my = (from.y + to.y) / 2;
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const cx = mx - dy * 0.15;
+    const cy = my + dx * 0.15;
+
+    const pathId = `path-${idx}`;
+    const d = `M${from.x},${from.y} Q${cx},${cy} ${to.x},${to.y}`;
+
+    // Line
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('id', pathId);
+    path.classList.add('conn-line', `conn-line-${conn.color}`);
+    svg.appendChild(path);
+
+    // Particles
+    for (let p = 0; p < conn.particles; p++) {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('r', '2.5');
+      circle.classList.add('particle');
+      if (conn.color !== 'cyan') circle.classList.add(`particle-${conn.color}`);
+      circle.setAttribute('filter', 'url(#glow)');
+
+      const anim = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
+      anim.setAttribute('dur', `${conn.speed}s`);
+      anim.setAttribute('repeatCount', 'indefinite');
+      anim.setAttribute('begin', `${(p / conn.particles) * conn.speed}s`);
+
+      const mpath = document.createElementNS('http://www.w3.org/2000/svg', 'mpath');
+      mpath.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', `#${pathId}`);
+      anim.appendChild(mpath);
+      circle.appendChild(anim);
+      svg.appendChild(circle);
+    }
+  });
+}
+
+// Draw on load and resize
+window.addEventListener('load', () => {
+  setTimeout(drawOverallConnections, 200);
+});
+window.addEventListener('resize', drawOverallConnections);
+
+// ─── REQUIREMENTS EDITOR ─────────────────────
+const defaultReqMd = `# ReVx EMS — Requirements Specification
+
+> **Version**: 0.2 | **Date**: 2026-02-25 | **Status**: IN PROGRESS
+>
+> **Canonical source**: This file is the single source of truth for requirements. The HTML Tab 4 mirrors this content.
+
+---
+
+## 1. Project Overview
+
+Implement the ReVx EMS (Energy Management System) for Battery Energy Storage Systems (BESS).
+The system manages BMS, PCS, BTMS, FSS, metering, DG, Solar PV, and auxiliary sensors
+through a single embedded controller (Advantech ECU-1170-552A).
+
+### 1.1 Scale
+
+| Size | Capacity | Typical Config |
+|------|----------|---------------|
+| Residential | 50 kWh | 16S × 3 modules × 1 rack × 1 cluster |
+| Medium | 215 kWh – 1 MWh | 16S–54S × 5–10 modules × 4–8 racks × 1–2 clusters |
+| Large Container | 1 – 6+ MWh | 54S–108S × 10–20 modules × 8–16 racks × 2–8 clusters |
+
+### 1.2 Core Principle
+
+**Configuration-driven**: One binary serves all topologies. All parameters in YAML.
+
+### 1.3 Team & Timeline
+
+| Parameter | Value |
+|-----------|-------|
+| Team size | 2–3 developers |
+| Timeline | 15 months (64 weeks) — realistic estimate |
+| Approach | MVP-first with 6 milestones (M0–M5) |
+| Hardware available | ECU-1170 only. BMS/PCS pending → simulators required |
+| Languages | C (safety/firmware), Python (application), React (HMI frontend) |
+
+---
+
+## 2. Software Modules (Implementation Order)
+
+### Phase 0: Simulator & Platform Setup
+
+Before any module development, establish the development and testing foundation.
+This phase is critical because BMS and PCS hardware are not yet available.
+
+| Deliverable | Description | Tools |
+|-------------|-------------|-------|
+| OS Bring-up | Ubuntu 22.04 LTS on ECU-1170-552A via Advantech BSP. Kernel config, SocketCAN, GPIO, RS485 drivers verified | Advantech BSP |
+| CAN Bus Simulator | Virtual CAN (vcan) + DBC replay tool. Generates realistic BMU→EMS L2 traffic at configurable rates (300ms/2000ms cycles) | python-can, cantools, vcan |
+| Modbus RTU Slave Simulator | Software PCS simulator on USB-RS485 adapter. Responds to FC03/FC06 with realistic V1.24 telemetry, accepts setpoints on 0x500E/0x0291 | pymodbus |
+| GPIO Test Harness | Loopback wiring or software mock for DI/DO testing. Simulate E-Stop (DI-6+7), Fire (DI-3+4), ACDB (DI-0) signals | libgpiod, shell scripts |
+| CI/CD Pipeline | Build scripts, cross-compilation toolchain, unit test framework, linting | pytest, ctest, GitHub Actions |
+| Project Scaffolding | Monorepo structure, config schema, RTDB header/interface definitions, IPC message contracts | YAML schemas, C headers |
+
+### Phase 1–5: Module Development
+
+| Phase | Module | Language | Priority | Description |
+|-------|--------|----------|----------|-------------|
+| 1 | data_manager | C / Python | P0 | POSIX shm RTDB, auto-sized from config |
+| 1 | comm_manager | C/C++/Python | P0 | CAN (SocketCAN+DBC), Modbus RTU/TCP, GPIO |
+| 1 | safety_manager | C | P0 | E-Stop, Fire, Flood. <100ms. HW watchdog |
+| 1 | logger | C++/Python | P1 | Parquet 1Hz, DuckDB, JSONL events |
+| 1 | config_manager | Python | P2 | YAML parsing, schema validation |
+| 2 | control_manager | Python/C | P0 | 1Hz loop, source priority, modes, algorithms |
+| 2 | alarm_manager | Python | P0 | 3-tier (E_W/A_P/P_P), IEC 62682 |
+| 3 | hmi_server | Python+React | P1 | FastAPI + WebSocket, 7 screens |
+| 3 | scheduler | Python | P1 | Charge/discharge windows, 96-pt curves |
+| 4 | cloud_manager | Python | P1 | paho-mqtt, MQTT/TLS, offline buffer |
+| 4 | ota_manager | Python | P2 | A/B partition, signature, rollback |
+| 5 | diagnostics | Python | P2 | SOH trending, efficiency, thermal |
+
+---
+
+## 3. Configuration Files
+
+All topology defined in YAML. Key files:
+
+| File | Key Parameters | Hot-Reload |
+|------|---------------|------------|
+| \`system_config.yaml\` | cluster_count, racks_per_cluster, modules_per_rack (3–20), cells_per_module (16–108), temps_per_module | No |
+| \`bms_config.yaml\` | Per-cluster: can_interface, bitrate, dbc_file (L1/L2), heartbeat_timeout | No |
+| \`pcs_config.yaml\` | protocol (rtu/tcp), port/baud, slave_id, register_map_file | No |
+| \`devices_config.yaml\` | Per-device: type, protocol, address, register_map_file, polling_rate | No |
+| \`control_config.yaml\` | soc_levels, rated_power, derating_curves, ramp_rate, source_priority | Yes |
+| \`alarms_config.yaml\` | Per-signal: warn/alarm/protection thresholds, hysteresis, delay | Yes |
+| \`schedule_config.yaml\` | charge/discharge_windows[], curve_points[], active_mode | Yes |
+| \`cloud_config.yaml\` | broker_url, topic_prefix, telemetry_interval, auth | No |
+| \`gpio_config.yaml\` | DI/DO pin map (ACDB, FSS, E-Stop, indicators, PCS Em Stop, siren) | No |
+| \`hmi_config.yaml\` | resolution, branding, refresh_rates, theme | Yes |
+
+---
+
+## 4. Platform & Operating System
+
+| Parameter | Decision | Rationale |
+|-----------|----------|-----------|
+| **Development OS** | Ubuntu 22.04 LTS (Advantech BSP) | Fast iteration with \`apt\`, team familiarity, full package ecosystem. Used for Phases 0–4 |
+| **Production OS** | Yocto Linux (Advantech BSP) | Minimal footprint, reproducible builds, small attack surface. Migration at M5 (month 15) |
+| **BSP** | Advantech official BSP for ECU-1170 | Guaranteed CAN, RS-485, GPIO, Ethernet, HDMI driver support |
+| **Kernel** | Stock Linux kernel (no PREEMPT_RT) | 100ms safety requirement has 20x headroom on stock kernel (~5ms GPIO response). PREEMPT_RT adds complexity for no benefit at this timing target |
+| **Safety Manager CPU** | A53 (Linux \`SCHED_FIFO\` C process) | SIL-2/ASIL-B certification deferred to v2+. A53 Linux process is sufficient and saves 3–4 weeks vs R5 bare-metal. Migration path to R5 preserved (same C logic, different platform) |
+| **R5 Cores** | Reserved / unused in v1 | Available for safety_manager migration when SIL-2 certification is pursued |
+| **Certification** | SIL-2 / ASIL-B deferred to v2+ | v1 targets "proven in use" approach. Formal certification requires MC/DC coverage, FMEA docs, third-party audit — not feasible in 15-month v1 timeline |
+
+### Yocto Migration Plan (M5)
+
+1. Pin all Python/C library versions from day 1 in \`requirements.txt\` and \`CMakeLists.txt\`
+2. Do a Yocto test build at M3 (month 9) to catch version/packaging issues early
+3. Create Yocto recipe for each module at M5
+4. Final Yocto image: only packages actually used, hardened config, read-only rootfs
+
+---
+
+## 5. IPC Architecture
+
+### 5.1 Event/Message Bus: ZeroMQ
+
+| Parameter | Decision |
+|-----------|----------|
+| Library | \`libzmq\` (C++) + \`pyzmq\` (Python) + \`czmq\` or raw \`zmq.h\` (C) |
+| Transport | \`ipc://\` Unix domain sockets (all modules on same controller) |
+| Throughput | ~2.8M msg/s at 10B (far exceeds our ~100 msg/s requirement) |
+| Latency | ~33µs constant up to 4KB |
+
+**Patterns Used**:
+
+| Pattern | Use Case | Example |
+|---------|----------|---------|
+| PUB/SUB | RTDB change notifications, alarms, heartbeats, safety events | comm_manager publishes \`bms.cluster.0.rack.0.soc\`, control/alarm/hmi/logger subscribe |
+| REQ/REP | Synchronous command-response | HMI → control_manager (mode change), cloud → control (remote cmd) |
+| PUSH/PULL | Many-to-one event ingestion | All modules → logger (event stream, no reply needed, ZMQ buffers on slow consumer) |
+
+**Rationale**: 8/12 modules are Python — \`pyzmq\` maturity is critical (15+ years, async support). NNG (nanomsg-next-gen) was considered for its pure C implementation and thread-safety but rejected due to \`pynng\` having ~1/20th the community. C++ dependency of libzmq is irrelevant on A53/4GB Ubuntu.
+
+### 5.2 Message Serialization: MessagePack
+
+| Parameter | Decision |
+|-----------|----------|
+| Format | MessagePack (binary, schemaless) |
+| Python library | \`msgpack\` (battle-tested, used by Redis, Fluentd, Jupyter) |
+| C library | \`mpack\` (~50KB, header-friendly, embeds into safety_manager/comm_manager) |
+| Payload size | 30–50% smaller than JSON |
+| Speed | ~2–3x faster than JSON serialize/deserialize |
+
+**Rationale**: No \`.proto\` files to maintain (saves build step for 2–3 dev team). Schemaless = fast iteration during M0–M3 when message formats change frequently. Protobuf rejected as overkill for single-controller internal IPC with small team. JSON used only for cloud API and config files.
+
+### 5.3 RTDB: POSIX Shared Memory
+
+| Parameter | Decision |
+|-----------|----------|
+| Mechanism | \`shm_open()\` + \`mmap()\` — POSIX shared memory |
+| Access latency | ~50–100ns (direct pointer dereference) |
+| Layout | Hierarchical fixed-size struct: \`rtdb->cluster[C].rack[R].module[M].cell_v[K]\` |
+| Max size | ~800KB worst case (8 clusters × 16 racks × 20 modules × 108 cells) |
+| Creator | \`data_manager\` creates and sizes the segment at startup from \`system_config.yaml\` |
+| Writers | Direct write via mmap pointer. No mediation. Single-writer-per-path enforced |
+| Python access | \`ctypes.Structure\` mirroring C struct, attached via \`mmap\` |
+| Concurrency | Seqlock per-rack (see below) |
+
+**Rationale**: 1000x faster than Redis (~50ns vs ~100µs), no extra process, zero Yocto footprint, deterministic access. SCADA/PLC industry standard. Redis rejected — adds process, overkill for single-controller embedded. Hierarchical struct maps 1:1 to YAML config topology. Fixed-size arrays (no pointers) = contiguous memory, no malloc.
+
+### 5.4 Concurrency: Seqlock (per-rack granularity)
+
+| Parameter | Decision |
+|-----------|----------|
+| Mechanism | Seqlock — \`_Atomic uint32_t seq\` per \`rack_t\` |
+| Granularity | Per-rack (one seqlock per rack — matches CAN frame decode granularity) |
+| Reader behavior | Never blocks. Retries if writer was mid-update (odd sequence counter) |
+| Writer behavior | Increments seq (odd) → writes all fields → increments seq (even) |
+| Crash behavior | Crashed writer leaves odd seq → readers retry → writer restarts → next write resets to even. No stuck locks |
+
+**Rationale**: Zero reader blocking, trivial implementation (~10 lines C), no deadlock or priority-inversion risk. \`pthread_rwlock\` rejected due to priority inversion (HMI read-lock blocking comm_manager writer) and crash-recovery complexity. No-lock rejected due to torn read risk on multi-core A53 without memory barriers.
+
+**RTDB Write Ownership** (enforced by convention — single writer per path):
+
+| RTDB Path Prefix | Writer | Readers |
+|-----------------|--------|---------|
+| \`/bms/*\` | comm_manager (CAN) | control, alarm, hmi, logger, cloud |
+| \`/pcs/*\` | comm_manager (Modbus) | control, alarm, hmi, logger, cloud |
+| \`/gpio/di/*\` | safety_manager | control, alarm, logger |
+| \`/gpio/do/*\` | safety_manager | hmi, logger |
+| \`/grid/*\` | comm_manager | control, alarm |
+| \`/solar/*\` | comm_manager | control, alarm |
+| \`/control/*\` | control_manager | hmi, cloud, logger |
+| \`/alarm/*\` | alarm_manager | hmi, cloud, logger |
+
+---
+
+## 6. Protocols
+
+### 6.1 BMS (CAN DBC Layer 2 — BMU → EMS)
+
+- Layer 2 (BMU → EMS): Pack SOC, V/I, min/max cell V/T, faults
+- CAN IDs: 0x98FF0003 – 0x98FF0903
+- Cycle: 300ms (primary), 2000ms (cell data), 1000ms–3000ms (info)
+
+**Key L2 Messages**:
+
+| CAN ID | Message | DLC | Cycle | Key Signals |
+|--------|---------|-----|-------|-------------|
+| 0x98FF0003 | SOC_Message | 7 | 300ms | SOC (0.5%), Charge/Discharge Current Limit, BMU_Operating_State, Heartbeat |
+| 0x98FF0103 | Pack_Voltage_Current | 8 | 300ms | Unswitched_Pack_V (0.0625V), Pack_Current (0.125A), Contactor cmd+status |
+| 0x98FF0203 | Min_Max_Voltage | 8 | 300ms | V_min, V_max (0.000122V), V_min_ID, V_max_ID |
+| 0x98FF0303 | Min_Max_Temperature | 8 | 300ms | T_min, T_max (0.015625°C), T_min_ID, T_max_ID |
+| 0x98FF0403 | DTC_Accommodation | 8 | 300ms | Active_Fault_1..8 (8 bytes) |
+| 0x98FF0503 | Pack_Status | 8 | 300ms | Rack_ID, MCCB, Fuse, PS, Fan, Watchdog |
+| 0x98FF0803 | Pack_Info | 8 | 1000ms | SOH (0.5%), Cycle_Count, Delta_V, Delta_T |
+| 0x98FF2003–3B03 | Cell_Voltages | 8 | 2000ms | V_0–V_159 (4 cells/msg, U16, 0.000122V) |
+| 0x98FF8003–8903 | Cell_Temps | 8 | 2000ms | T_0–T_39 (4/msg, I16, 0.015625°C) |
+| 0x98FF0603 | Hw_Version | 8 | 3000ms | 8-byte HW version |
+| 0x98FF0703 | Fw_Version | 8 | 3000ms | 8-byte FW version |
+| 0x98FF0903 | Time_Date | 8 | 1000ms | HR, MIN, SEC, DD, MM, YYYY |
+
+### 6.2 PCS (Modbus RTU V1.24)
+
+- RS485 9600/8N1, FC03 read, FC06 write, 16 regs/read max
+- Key control: 0x500E (active power ×10), 0x0291 (on/off), 0x5064 (fault reset)
+
+**Telemetry Registers (Read-Only)**:
+
+| Address | Signal | Type | Scale | Notes |
+|---------|--------|------|-------|-------|
+| 0x6020–0x6022 | AC line V (AB,BC,CA) | I16 | V×10 | Line-to-line |
+| 0x6023–0x6025 | AC phase V (A,B,C) | I16 | V×10 | Phase-neutral |
+| 0x6026–0x6028 | AC phase I (A,B,C) | I16 | A×10 | |
+| 0x602C | Grid frequency | I16 | Hz×100 | 5000=50Hz |
+| 0x6030–0x6032 | Per-phase active P | I16 | kW×10 | +dchg, −chg |
+| 0x6039–603B | Total P/Q/S | I16 | kW/kVAr/kVA×10 | Primary |
+| 0x603C | Power factor | I16 | ×100 | |
+| 0x6050–0x6052 | Bus V (total/pos/neg) | I16 | V×10 | DC bus |
+| 0x6053/6054 | Battery V / I | I16 | V/A×10 | +dchg |
+| 0x6055 | DC power | I16 | kW×10 | |
+| 0x6057 | Working condition | U16 | bitfield | 0+8=on-grid,6=fault |
+| 0x6058–605A | IGBT/Ambient/Ind temp | I16 | °C×10 | |
+| 0x605C | Grid state | U16 | enum | 0–6 |
+
+**Control Registers (Read/Write)**:
+
+| Address | Signal | Scale | Notes |
+|---------|--------|-------|-------|
+| 0x500E | Active power setpoint | kW×10 | PRIMARY. +dchg, −chg. -200=20kW charge |
+| 0x500F | Reactive power | kVAr×10 | +inductive, −capacitive |
+| 0x0291 | Power on/off | 1 | 1=ON, 0=OFF. Wait 10s |
+| 0x5064 | Fault reset | 1 | Write 1 (preferred) |
+| 0x5066 | Off-grid mode | 1 | 1=off-grid, 0=on-grid |
+| 0x5078/5079 | Max charge/discharge P | kW×10 | Power ceiling |
+
+**Fault Words (0x1700–0x1707)**:
+
+| Reg | Name | Key Bits |
+|-----|------|----------|
+| 0x1700 | HW Fault 1 | EPO, IGBT OCP, Bus OV, wave-by-wave OC |
+| 0x1701 | HW Fault 2 | 24V PSU, Fan, Inductance OT, Module OT, Fire, Ambient OT |
+| 0x1702 | Grid Fault | Phase OV/UV, Over/Under-freq, Phase seq, Phase OC |
+| 0x1703 | Bus Fault | Pre-charge OV/UV, Run OV/UV, Batt OV/UV, DC OC, Reverse |
+| 0x1704 | AC Cap Fault | Timeout, Phase OC, Leakage, DC component, Mismatch |
+| 0x1705 | System Fault | RAM, EEPROM, CAN, Insulation, BMS comm, EMS comm |
+| 0x1706 | Switch Fault | Relay faults, adhesion. CRITICAL: contact manufacturer |
+| 0x1707 | Other Fault | Inv OV/UV, Island, Resonance, Off-grid short |
+
+---
+
+## 7. Safety Requirements
+
+- **E-Stop**: Dual-channel (DI-6 NO + DI-7 NC) → DO-5 (PCS stop) + DO-0 (ACDB trip) + DO-6 (siren) + DO-4 (fault lamp)
+- **Fire**: Dual-confirm (DI-3 Smoke + DI-4 Heat) → DO-1 (extinguisher) + DO-5 + DO-0 + DO-6 + DO-4
+- **Response**: <100ms via GPIO interrupt (safety_manager in C on A53, \`SCHED_FIFO\` RT priority)
+- **Watchdog**: Hardware watchdog on /dev/watchdog, 500ms kick interval
+- **Certification**: SIL-2 / ASIL-B deferred to v2+. v1 uses "proven in use" approach
+- **Future migration**: safety_manager logic can move to R5 bare-metal for SIL-2 without code changes
+
+### GPIO Signal List
+
+**Digital Inputs (DI)**:
+
+| DI# | Subsystem | Signal | Active State | Description |
+|-----|-----------|--------|-------------|-------------|
+| DI-0 | ACDB | Aux Status | High = Closed | ACDB contactor feedback (grid connected) |
+| DI-1 | Flood Sensor | Status | High = Flood | Container floor water ingress |
+| DI-2 | Limit Switch | Status | High = Open | Container door/panel access |
+| DI-3 | Smoke Sensor | Status | High = Smoke | Smoke detection → FSS alarm |
+| DI-4 | Heat Detector | Status | High = Heat | Thermal anomaly → FSS + BTMS |
+| DI-5 | Fire Extinguisher | Status | High = Discharged | Suppression discharge feedback |
+| DI-6 | EM OFF PB | NO contact | High = Pressed | E-Stop normally open. Rising edge triggers |
+| DI-7 | EM OFF PB | NC contact | Low = Pressed | E-Stop normally closed. Falling edge confirms |
+
+**Digital Outputs (DO)**:
+
+| DO# | Subsystem | Signal | Active State | Description |
+|-----|-----------|--------|-------------|-------------|
+| DO-0 | ACDB | Shunt Trip | High = Trip | Trips ACDB contactor (grid disconnect) |
+| DO-1 | Fire Extinguisher | Drive | High = Activate | Fire suppression. On Smoke+Heat |
+| DO-2 | Warning Indicator | Drive | High = ON | Yellow lamp. E_W alarms |
+| DO-3 | Running Indicator | Drive | High = ON | Green lamp. PCS in Run state |
+| DO-4 | Fault Indicator | Drive | High = ON | Red lamp. A_P / P_P events |
+| DO-5 | PCS | Em Stop IOs | High = Stop | Emergency stop to PCS (independent of Modbus) |
+| DO-6 | Siren | Drive | High = ON | Audible alarm: Fire, E-Stop, protection faults |
+| DO-7 | Reserved | — | — | Spare (BTMS relay, DG start, etc.) |
+
+---
+
+## 8. Power Source Priority
+
+### DAY Mode (Solar available)
+Priority: Solar > Grid > BESS > DG
+
+### NIGHT Mode (Solar N/A)
+Priority: Grid > BESS > DG
+
+Detection: Configurable sunrise/sunset times or irradiance threshold.
+
+Full 16-row DAY and 8-row NIGHT truth tables: see Architecture Spec v3.1 Section 3.
+
+---
+
+## 9. RTDB Namespace
+
+| Path | Type | Source | Count |
+|------|------|--------|-------|
+| \`/bms/cluster[C]/rack[R]/module[M]/cell_voltage[K]\` | U16 mV | BMU→EMS L2 | C×R×M×K |
+| \`/bms/cluster[C]/rack[R]/module[M]/cell_temp[N]\` | I16 0.1°C | BMU→EMS L2 | C×R×M×temps |
+| \`/bms/cluster[C]/rack[R]/soc\` | U16 0.1% | BMU→EMS L2 | C×R |
+| \`/bms/cluster[C]/rack[R]/pack_voltage\` | U16 | BMU→EMS L2 | C×R |
+| \`/bms/cluster[C]/rack[R]/bms_state\` | Enum | BMU→EMS L2 | C×R |
+| \`/pcs/active_power\` | I16 0.1kW | PCS 0x6039 | 1 |
+| \`/pcs/fault_words[0..7]\` | U16 | PCS 0x1700 | 8 |
+| \`/gpio/di[0..7]\` | bool | GPIO DI | 8 |
+| \`/gpio/do[0..7]\` | bool | GPIO DO | 8 |
+| \`/grid/available\` | bool | DI-0 (ACDB) | 1 |
+| \`/solar/power_kw\` | float | Meter/PV | 1 |
+| \`/control/source_priority\` | array | Ctrl Mgr | 4 (ordered) |
+
+---
+
+## 10. Resolved Decisions
+
+| # | Decision | Choice | Rationale |
+|---|----------|--------|-----------|
+| 1 | OS | Ubuntu 22.04 dev → Yocto production | Fast iteration dev, minimal production footprint |
+| 2 | BSP | Advantech official | ECU-1170 launched Jan 2025 with BESS target market |
+| 3 | RT Kernel | Not needed (stock) | 100ms has 20x headroom on stock kernel |
+| 4 | Safety CPU | A53 Linux process (v1) | R5 bare-metal deferred, saves 3–4 weeks |
+| 5 | Certification | SIL-2/ASIL-B deferred to v2+ | "Proven in use" for v1 |
+| 6 | Safety language | C only | Zig deferred |
+| 7 | Timeline | 15 months (64 weeks) | Realistic for 2–3 devs without BMS/PCS hardware |
+| 8 | Phase 0 | Simulators added | BMS/PCS hardware unavailable |
+| 9 | Milestones | M0–M5 MVP-first | 6-gate delivery with acceptance criteria |
+| 10 | HMI theme | Dark green (spec default) | Cyberpunk for planning tools only |
+| 11 | Event bus | ZeroMQ (libzmq + pyzmq) | pyzmq maturity for 8/12 Python modules |
+| 12 | ZMQ patterns | PUB/SUB + REQ/REP + PUSH/PULL | Fanout + commands + logger ingestion |
+| 13 | Serialization | MessagePack | No .proto build step, mpack (C) + msgpack (Python) |
+| 14 | RTDB | POSIX shm (hierarchical struct) | 1000x faster than Redis, SCADA standard, ~800KB max |
+| 15 | RTDB ownership | Direct writer, no mediation | comm_manager writes directly to shm |
+| 16 | Concurrency | Seqlock per-rack | Zero reader blocking, crash-safe |
+| 17 | CAN hot path | Hybrid: C thread + Python orchestrator | C for SocketCAN RX/decode/RTDB, Python for Modbus/lifecycle |
+| 18 | Multi-cluster CAN | One physical bus per cluster | CAN ID collision avoidance, fault isolation |
+| 19 | PCS protocol | RTU primary, TCP config option | Spec V1.24 is RTU |
+| 20 | Modbus polling | ~500ms cycle | Calculable from register count + 9600 baud |
+| 21 | PCS vendor abstraction | Deferred to M2 | Implement when second vendor appears |
+| 22 | Watchdog | /dev/watchdog, 500ms kick | safety_manager kicks, kernel resets on timeout |
+| 23 | Control manager | Python at 1Hz | ~130µs/cycle, 7700x headroom |
+| 24 | Source priority override | Persist to control_config.yaml | Survives reboot |
+| 25 | HMI framework | React + Vite | Embedded kiosk, no SSR, no Node.js in prod |
+| 26 | HMI auth | PIN-based | 4-digit operator PIN, separate admin PIN |
+| 27 | Repository | Monorepo | 2-3 devs, atomic changes, shared src/common/ |
+| 28 | Deployment | Native systemd | Docker requires too many HW isolation holes |
+| 29 | Logger format | Parquet+DuckDB (telemetry) + JSONL (events) | Columnar compression for 34K+ cells |
+| 30 | Retention policy | FIFO delete oldest Parquet when SSD >80% | Simple, no VACUUM |
+| 31 | Testing | pytest (Python) + ctest (C) + simulator integration | Evolves with code |
+
+---
+
+## 11. External Dependencies — Pending Questions
+
+These 8 questions require external info before they can be resolved.
+
+### BMS Vendor Dependencies
+| # | Question | Default | External Info Needed |
+|---|----------|---------|---------------------|
+| 4.2 | CAN FD support | CAN 2.0B 500kbps | BMS vendor: Does BMU support CAN FD? Bitrate? DBC compatibility? |
+| 4.4 | BMS heartbeat timeout | 3× cycle (900ms) | BMS vendor: Goodbye frame? Degradation behavior? Recommended timeout? |
+
+### PCS Vendor Dependencies
+| # | Question | Default | External Info Needed |
+|---|----------|---------|---------------------|
+| 10.4 | OTA scope | EMS-only | PCS/BMS vendor: FW update over Modbus/CAN? What protocol? |
+
+### Site / Deployment Dependencies
+| # | Question | Default | External Info Needed |
+|---|----------|---------|---------------------|
+| 7.3 | Multi-PCS | Single PCS | Project engineering: Parallel PCS units? Master/slave? |
+| 7.4 | Grid code | CEA (India) | Project manager: First deployment country? IEEE 1547 / EN 50549? |
+
+### Cloud Platform Dependencies
+| # | Question | Default | External Info Needed |
+|---|----------|---------|---------------------|
+| 10.1 | MQTT broker | Mosquitto (self-hosted) | Business: AWS IoT Core / Azure IoT Hub / self-hosted? Auth method? |
+| 10.2 | Cloud telemetry | 10s pack-level | Cloud architect: Per-cell or pack-level? Raw 1Hz or downsampled? |
+| 10.3 | Offline buffer | 24h (~50MB) | Deployment: Site connectivity? Rural sites may need 72h+ |
+
+---
+
+## 12. Decision Summary
+
+| Category | Resolved | Pending | Status |
+|----------|----------|---------|--------|
+| Platform & OS | 6 | 0 | ✅ Complete |
+| IPC & Data Layer | 7 | 0 | ✅ Complete |
+| BMS / CAN | 3 | 2 | ⏳ Vendor |
+| PCS / Modbus | 4 | 1 | ⏳ Vendor |
+| Safety | 3 | 0 | ✅ Complete |
+| Control | 3 | 2 | ⏳ Site |
+| HMI | 3 | 0 | ✅ Complete |
+| Logger | 3 | 0 | ✅ Complete |
+| Cloud & OTA | 0 | 3 | ⏳ Platform |
+| Build & Deploy | 3 | 0 | ✅ Complete |
+| **Total** | **35** | **8** | **Phase 0–4 unblocked** |
+`;
+
+const editor = document.getElementById('req-editor');
+const preview = document.getElementById('req-preview');
+const charCount = document.getElementById('req-char-count');
+
+editor.value = defaultReqMd;
+updateCharCount();
+
+editor.addEventListener('input', () => {
+  updateCharCount();
+});
+
+function updateCharCount() {
+  charCount.textContent = editor.value.length + ' chars • ' + editor.value.split('\n').length + ' lines';
+}
+
+function setReqMode(mode) {
+  document.getElementById('btn-edit').classList.toggle('active', mode === 'edit');
+  document.getElementById('btn-preview').classList.toggle('active', mode === 'preview');
+  if (mode === 'edit') {
+    editor.style.display = 'block';
+    preview.style.display = 'none';
+  } else {
+    editor.style.display = 'none';
+    preview.style.display = 'block';
+    preview.innerHTML = renderMarkdown(editor.value);
+  }
+}
+
+function renderMarkdown(md) {
+  // Step 1: Extract and parse tables as blocks FIRST
+  const tableBlocks = [];
+  md = md.replace(/((?:^\|.+\|$\n?){2,})/gm, (block) => {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) return block;
+
+    // Parse header row
+    const headerCells = lines[0].split('|').filter(c => c.trim()).map(c => c.trim());
+
+    // Check for separator row (|---|---|)
+    const sepIdx = lines.findIndex(l => /^\|[\s:_-]+\|$/.test(l.trim()) || l.split('|').filter(c => c.trim()).every(c => /^[\s:_-]+$/.test(c)));
+
+    let dataStartIdx = 1;
+    if (sepIdx === 1) dataStartIdx = 2;
+
+    // Parse body rows
+    const bodyRows = [];
+    for (let i = dataStartIdx; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line || !line.includes('|')) continue;
+      // Skip separator rows
+      const cells = line.split('|').filter(c => c.trim !== undefined).slice(0);
+      // Remove empty first/last from leading/trailing pipes
+      const cleaned = line.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+      if (cleaned.every(c => /^[\s:_-]*$/.test(c))) continue;
+      bodyRows.push(cleaned);
+    }
+
+    // Build HTML table
+    let tableHtml = '<div style="overflow-x:auto;margin:0.8rem 0"><table>';
+    tableHtml += '<thead><tr>';
+    headerCells.forEach(c => { tableHtml += `<th>${inlineFormat(c)}</th>`; });
+    tableHtml += '</tr></thead><tbody>';
+    bodyRows.forEach(row => {
+      tableHtml += '<tr>';
+      row.forEach((c, i) => { tableHtml += `<td>${inlineFormat(c)}</td>`; });
+      // Fill missing cells
+      for (let i = row.length; i < headerCells.length; i++) tableHtml += '<td></td>';
+      tableHtml += '</tr>';
+    });
+    tableHtml += '</tbody></table></div>';
+
+    const placeholder = `<!--TABLE_${tableBlocks.length}-->`;
+    tableBlocks.push(tableHtml);
+    return placeholder;
+  });
+
+  // Step 2: Process rest of markdown
+  let html = md
+    // Code blocks
+    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="lang-$1">$2</code></pre>')
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Headers
+    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // Bold / italic
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Blockquote
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    // HR
+    .replace(/^---$/gm, '<hr>')
+    // Checkbox lists
+    .replace(/^- \[x\] (.+)$/gm, '<li style="list-style:none">☑ $1</li>')
+    .replace(/^- \[ \] (.+)$/gm, '<li style="list-style:none">☐ $1</li>')
+    // Unordered lists
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    // Paragraphs
+    .replace(/\n\n/g, '</p><p>')
+    ;
+
+  // Wrap consecutive list items
+  html = html.replace(/((?:<li[^>]*>.*<\/li>\s*)+)/g, '<ul>$1</ul>');
+
+  // Step 3: Re-insert tables
+  tableBlocks.forEach((tableHtml, i) => {
+    html = html.replace(`<!--TABLE_${i}-->`, tableHtml);
+  });
+
+  return `<p>${html}</p>`;
+}
+
+// Inline formatting helper for table cells
+function inlineFormat(text) {
+  return text
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+}
+
+function downloadReqMd() {
+  const blob = new Blob([editor.value], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'revx-ems-claude-code-instructions.md';
+  a.click();
+}
+</script>
+</body>
+</html>

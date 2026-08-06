@@ -1,0 +1,172 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build C (Debug)",
+      "type": "shell",
+      "command": "make build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "Build C (ARM64)",
+      "type": "shell",
+      "command": "make build-arm",
+      "group": "build",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "Build HMI",
+      "type": "shell",
+      "command": "make build-hmi",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test All",
+      "type": "shell",
+      "command": "make test",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": [
+        "$gcc",
+        {
+          "owner": "pytest",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          "pattern": {
+            "regexp": "^(.+)::(\\S+)\\s+(FAILED|ERROR)",
+            "file": 1,
+            "message": 3
+          }
+        }
+      ]
+    },
+    {
+      "label": "Test Python",
+      "type": "shell",
+      "command": "uv run pytest tests/ -v -m 'not integration'",
+      "group": "test",
+      "problemMatcher": {
+        "owner": "pytest",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.+)::(\\S+)\\s+(FAILED|ERROR)",
+          "file": 1,
+          "message": 3
+        }
+      }
+    },
+    {
+      "label": "Test C",
+      "type": "shell",
+      "command": "ctest --test-dir build --output-on-failure",
+      "group": "test",
+      "problemMatcher": "$gcc"
+    },
+    {
+      "label": "Test Integration",
+      "type": "shell",
+      "command": "uv run pytest tests/test_integration.py -v -m integration",
+      "group": "test",
+      "problemMatcher": {
+        "owner": "pytest",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.+)::(\\S+)\\s+(FAILED|ERROR)",
+          "file": 1,
+          "message": 3
+        }
+      }
+    },
+    {
+      "label": "Test HMI",
+      "type": "shell",
+      "command": "make test-hmi",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Sim All",
+      "type": "shell",
+      "command": "make sim-all",
+      "group": "none",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Sim All (Commercial)",
+      "type": "shell",
+      "command": "make sim-all PROFILE=commercial",
+      "group": "none",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Sim CAN",
+      "type": "shell",
+      "command": "make sim-can",
+      "group": "none",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Sim Modbus",
+      "type": "shell",
+      "command": "make sim-modbus",
+      "group": "none",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Sim GPIO",
+      "type": "shell",
+      "command": "make sim-gpio",
+      "group": "none",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "HMI Dev Server",
+      "type": "shell",
+      "command": "make dev-hmi",
+      "group": "none",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Validate Config",
+      "type": "shell",
+      "command": "make validate",
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint",
+      "type": "shell",
+      "command": "make lint",
+      "problemMatcher": []
+    },
+    {
+      "label": "Format",
+      "type": "shell",
+      "command": "make fmt",
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup",
+      "type": "shell",
+      "command": "make setup",
+      "problemMatcher": []
+    },
+    {
+      "label": "Verify Environment",
+      "type": "shell",
+      "command": "bash tools/verify-dev-env.sh",
+      "problemMatcher": []
+    }
+  ]
+}

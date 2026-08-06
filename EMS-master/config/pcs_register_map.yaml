@@ -1,0 +1,316 @@
+# pcs_register_map.yaml -- Synthetic PCS V1.24 Modbus Register Map
+# This file defines the Modbus holding register layout for PCS simulation.
+# All addresses, scaling factors, and defaults are synthetic -- designed to be
+# swapped with the real PCS V1.24 register map when the document arrives.
+#
+# Format: Each register has address, name, scale, unit, access, signed, default, description.
+# Scale: raw_value = engineering_value * scale (e.g., 230.0V * 10 = 2300 raw).
+# Signed: true = two's complement int16, false = unsigned uint16.
+# Access: r = read-only, rw = read-write (FC06 write single register).
+
+metadata:
+  version: "V1.24-synthetic"
+  phase_count: 3
+  rated_power_kw: 50.0
+  nominal_voltage_v: 230.0
+  nominal_frequency_hz: 50.0
+
+simulator:
+  startup_delay_s: 2.0
+  shutdown_delay_s: 1.5
+  ramp_rate_pct_per_s: 10.0
+
+registers:
+  # ---- AC Side (0x0001 - 0x000C) ----
+  - address: 0x0001
+    name: ac_voltage_l1
+    scale: 10
+    unit: V
+    access: r
+    signed: false
+    default: 2300
+    description: "AC voltage phase L1 (line-to-neutral RMS). Raw = V * 10."
+
+  - address: 0x0002
+    name: ac_voltage_l2
+    scale: 10
+    unit: V
+    access: r
+    signed: false
+    default: 2300
+    description: "AC voltage phase L2 (line-to-neutral RMS). Raw = V * 10."
+
+  - address: 0x0003
+    name: ac_voltage_l3
+    scale: 10
+    unit: V
+    access: r
+    signed: false
+    default: 2300
+    description: "AC voltage phase L3 (line-to-neutral RMS). Raw = V * 10."
+
+  - address: 0x0004
+    name: ac_current_l1
+    scale: 100
+    unit: A
+    access: r
+    signed: false
+    default: 0
+    description: "AC current phase L1 (RMS). Raw = A * 100. Zero in STANDBY."
+
+  - address: 0x0005
+    name: ac_current_l2
+    scale: 100
+    unit: A
+    access: r
+    signed: false
+    default: 0
+    description: "AC current phase L2 (RMS). Raw = A * 100. Zero in STANDBY."
+
+  - address: 0x0006
+    name: ac_current_l3
+    scale: 100
+    unit: A
+    access: r
+    signed: false
+    default: 0
+    description: "AC current phase L3 (RMS). Raw = A * 100. Zero in STANDBY."
+
+  - address: 0x0007
+    name: ac_frequency
+    scale: 100
+    unit: Hz
+    access: r
+    signed: false
+    default: 5000
+    description: "AC grid frequency. Raw = Hz * 100."
+
+  - address: 0x0008
+    name: ac_active_power
+    scale: 10
+    unit: kW
+    access: r
+    signed: true
+    default: 0
+    description: "AC active power (total 3-phase). Raw = kW * 10. Positive = charge, negative = discharge."
+
+  - address: 0x0009
+    name: ac_reactive_power
+    scale: 10
+    unit: kVAr
+    access: r
+    signed: true
+    default: 0
+    description: "AC reactive power (total 3-phase). Raw = kVAr * 10."
+
+  - address: 0x000A
+    name: ac_apparent_power
+    scale: 10
+    unit: kVA
+    access: r
+    signed: false
+    default: 0
+    description: "AC apparent power (total 3-phase). Raw = kVA * 10."
+
+  - address: 0x000B
+    name: ac_power_factor
+    scale: 1000
+    unit: ""
+    access: r
+    signed: true
+    default: 1000
+    description: "Power factor. Raw = PF * 1000. Range -1.000 to +1.000."
+
+  - address: 0x000C
+    name: ac_energy_today
+    scale: 10
+    unit: kWh
+    access: r
+    signed: false
+    default: 0
+    description: "Energy exported today. Raw = kWh * 10. Resets at midnight."
+
+  # ---- DC Side (0x0010 - 0x0013) ----
+  - address: 0x0010
+    name: dc_voltage
+    scale: 10
+    unit: V
+    access: r
+    signed: false
+    default: 4000
+    description: "DC bus voltage from battery. Raw = V * 10."
+
+  - address: 0x0011
+    name: dc_current
+    scale: 100
+    unit: A
+    access: r
+    signed: true
+    default: 0
+    description: "DC current. Raw = A * 100. Positive = charge, negative = discharge."
+
+  - address: 0x0012
+    name: dc_power
+    scale: 10
+    unit: kW
+    access: r
+    signed: true
+    default: 0
+    description: "DC power. Raw = kW * 10."
+
+  - address: 0x0013
+    name: dc_bus_voltage
+    scale: 10
+    unit: V
+    access: r
+    signed: false
+    default: 4000
+    description: "Internal DC bus voltage (post-converter). Raw = V * 10."
+
+  # ---- Thermal (0x0020 - 0x0022) ----
+  - address: 0x0020
+    name: temp_heatsink
+    scale: 10
+    unit: degC
+    access: r
+    signed: true
+    default: 300
+    description: "Heatsink temperature. Raw = degC * 10."
+
+  - address: 0x0021
+    name: temp_ambient
+    scale: 10
+    unit: degC
+    access: r
+    signed: true
+    default: 250
+    description: "Ambient temperature. Raw = degC * 10."
+
+  - address: 0x0022
+    name: temp_internal
+    scale: 10
+    unit: degC
+    access: r
+    signed: true
+    default: 350
+    description: "Internal (cabinet) temperature. Raw = degC * 10."
+
+  # ---- Status (0x0030 - 0x0033) ----
+  - address: 0x0030
+    name: operating_state
+    scale: 1
+    unit: enum
+    access: r
+    signed: false
+    default: 0
+    description: "PCS operating state. 0=STANDBY, 1=STARTING, 2=RUNNING, 3=STOPPING, 4=FAULT."
+
+  - address: 0x0031
+    name: fault_code
+    scale: 1
+    unit: bitmap
+    access: r
+    signed: false
+    default: 0
+    description: "Active fault code bitmap. 0 = no faults."
+
+  - address: 0x0032
+    name: warning_code
+    scale: 1
+    unit: bitmap
+    access: r
+    signed: false
+    default: 0
+    description: "Active warning code bitmap. 0 = no warnings."
+
+  - address: 0x0033
+    name: run_hours
+    scale: 1
+    unit: h
+    access: r
+    signed: false
+    default: 0
+    description: "Cumulative run hours since commissioning."
+
+  # ---- Energy Counters (0x0040 - 0x0043) ----
+  - address: 0x0040
+    name: energy_charge_hi
+    scale: 1
+    unit: kWh
+    access: r
+    signed: false
+    default: 0
+    description: "Cumulative charge energy, high word (kWh). Full value = hi * 65536 + lo."
+
+  - address: 0x0041
+    name: energy_charge_lo
+    scale: 1
+    unit: kWh
+    access: r
+    signed: false
+    default: 0
+    description: "Cumulative charge energy, low word (kWh)."
+
+  - address: 0x0042
+    name: energy_discharge_hi
+    scale: 1
+    unit: kWh
+    access: r
+    signed: false
+    default: 0
+    description: "Cumulative discharge energy, high word (kWh). Full value = hi * 65536 + lo."
+
+  - address: 0x0043
+    name: energy_discharge_lo
+    scale: 1
+    unit: kWh
+    access: r
+    signed: false
+    default: 0
+    description: "Cumulative discharge energy, low word (kWh)."
+
+  # ---- Control Registers (sparse addresses) ----
+  - address: 0x0291
+    name: on_off
+    scale: 1
+    unit: ""
+    access: rw
+    signed: false
+    default: 0
+    description: "PCS on/off control. Write 1 = start, 0 = stop."
+
+  - address: 0x0292
+    name: fault_reset
+    scale: 1
+    unit: ""
+    access: rw
+    signed: false
+    default: 0
+    description: "Fault reset. Write 1 to clear fault and return to STANDBY."
+
+  - address: 0x500E
+    name: active_power_setpoint
+    scale: 10
+    unit: kW
+    access: rw
+    signed: true
+    default: 0
+    description: "Active power setpoint. Raw = kW * 10. Positive = charge, negative = discharge."
+
+  - address: 0x500F
+    name: reactive_power_setpoint
+    scale: 10
+    unit: kVAr
+    access: rw
+    signed: true
+    default: 0
+    description: "Reactive power setpoint. Raw = kVAr * 10."
+
+  - address: 0x5010
+    name: pf_setpoint
+    scale: 1000
+    unit: ""
+    access: rw
+    signed: true
+    default: 1000
+    description: "Power factor setpoint. Raw = PF * 1000. Range -1.000 to +1.000."

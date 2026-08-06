@@ -1,0 +1,56 @@
+# bms_config.yaml — BMS Communication Configuration (Active Config)
+# Schema: config/schemas/bms_config.schema.json
+# This is the active configuration loaded by the EMS at startup.
+# Edit this file to configure the BMS. Validate with: make validate
+#
+# This file ships pre-populated with the Residential profile.
+
+_schema_version: "1.0"
+
+can:
+  # CAN network interface name.
+  # Use 'can0' for physical hardware (ECU-1170 onboard CAN).
+  # Use 'vcan0' for virtual CAN during development and simulation.
+  # Required.
+  interface: "vcan0"
+
+  # CAN bus bitrate in bits per second.
+  # Must match the hardware BMS configuration.
+  # Valid values: 250000 | 500000 | 1000000
+  # Unit: bps
+  # Required.
+  bitrate: 500000
+
+  # Enable CAN FD (Flexible Data-rate) mode.
+  # Set to true only if the BMS hardware supports CAN FD.
+  # Optional, defaults to false.
+  fd_enabled: false
+
+  # Filesystem path to the DBC file for CAN signal decoding.
+  # The DBC file defines the Layer 2 message and signal map for the BMU.
+  # Required.
+  dbc_path: "config/bms_layer2.dbc"
+
+  # Base CAN arbitration ID for the BMU master node.
+  # Slave IDs are computed as: base_id + (cluster_index * 0x100 + rack_index).
+  # Required.
+  base_id: 0x98FF0003
+
+timing:
+  # Polling interval for fast CAN messages (voltage, current, SoC updates).
+  # Valid range: 100 to 1000
+  # Unit: ms
+  # Required.
+  fast_cycle_ms: 300
+
+  # Polling interval for slow CAN messages (temperature, alarms, status).
+  # Valid range: 1000 to 5000
+  # Unit: ms
+  # Required.
+  slow_cycle_ms: 2000
+
+  # BMS communication timeout.
+  # Valid range: 1000 to 30000
+  # Unit: ms
+  # Required.
+  timeout_ms: 5000

@@ -1,0 +1,155 @@
+profiles:
+  - residential
+  - commercial
+  - container
+
+default_profile: residential
+
+auto_restart:
+  enabled: true
+  max_retries: 5
+  backoff_base_sec: 1.0
+  backoff_max_sec: 30.0
+
+phases:
+  - name: prereq
+    order: 0
+    parallel: false
+    processes:
+      - id: vcan_setup
+        name: "vCAN Setup"
+        command: "sudo modprobe vcan can can_raw && sudo ip link add dev vcan0 type vcan 2>/dev/null; sudo ip link set up vcan0"
+        type: oneshot
+        ignore_failure: true
+        requires_sudo: true
+
+      - id: ipc_dir
+        name: "IPC Directory"
+        command: "mkdir -p /run/ems"
+        type: oneshot
+        ignore_failure: true
+
+  - name: sims
+    order: 1
+    parallel: true
+    processes:
+      - id: can_sim
+        name: "CAN Simulator"
+        command: "uv run python -m tools.simulators.can_sim --interface vcan0 --config config/profiles/{profile}/bms_config.yaml"
+        type: daemon
+        health_check:
+          type: command
+          command: "ip link show vcan0 | grep -q UP"
+          timeout_sec: 5
+
+      - id: modbus_sim
+        name: "Modbus Simulator"
+        command: "uv run python -m tools.simulators.modbus_sim --transport tcp --tcp-port 5020 --config config/profiles/{profile}/pcs_config.yaml"
+        type: daemon
+        health_check:
+          type: tcp_port
+          port: 5020
+          timeout_sec: 5
+
+  - name: rtdb
+    order: 2
+    parallel: false
+    processes:
+      - id: data_manager_c
+        name: "Data Manager (C)"
+        command: "./build/src/data_manager/c/data_manager_c 1 4 10 16 8"
+        type: daemon
+        health_check:
+          type: shm_exists
+          path: "/dev/shm/ems_rtdb"
+          timeout_sec: 3
+
+  - name: foundation
+    order: 3
+    parallel: true
+    processes:
+      - id: config_manager
+        name: "Config Manager"
+        command: "uv run python -m ems_config_manager --config-dir config/"
+        type: daemon
+
+      - id: data_manager_py
+        name: "Data Manager (Py)"
+        command: "uv run python -m ems_data_manager"
+        type: daemon
+
+      - id: safety_manager
+        name: "Safety Manager"
+        command: "./build/src/safety_manager/safety_manager --rtdb-backend"
+        type: daemon
+
+  - name: comms
+    order: 4
+    parallel: true
+    processes:
+      - id: comm_manager_c
+        name: "Comm Manager (C)"
+        command: "./build/src/comm_manager/c/comm_manager_c --interface vcan0 --base-id 0x18FF0003"
+        type: daemon
+
+      - id: comm_manager_py
+        name: "Comm Manager (Py)"
+        command: "uv run python -m ems_comm_manager --config config/"
+        type: daemon
+
+  - name: data
+    order: 5
+    parallel: true
+    processes:
+      - id: logger
+        name: "Logger"
+        command: "uv run python -m ems_logger --config config/logger_config.yaml"
+        type: daemon
+
+  - name: app
+    order: 6
+    parallel: true
+    processes:
+      - id: control_manager
+        name: "Control Manager"
+        command: "uv run python -m ems_control_manager"
+        type: daemon
+
+      - id: alarm_manager
+        name: "Alarm Manager"
+        command: "uv run python -m ems_alarm_manager"
+        type: daemon
+
+      - id: scheduler
+        name: "Scheduler"
+        command: "uv run python -m ems_scheduler"
+        type: daemon
+
+  - name: ui
+    order: 7
+    parallel: true
+    processes:
+      - id: hmi_server
+        name: "HMI Server"
+        command: "uv run python -m ems_hmi_server"
+        type: daemon
+
+  - name: optional
+    order: 8
+    parallel: true
+    auto_start: false
+    processes:
+      - id: cloud_manager
+        name: "Cloud Manager"
+        command: "uv run python -m ems_cloud_manager"
+        type: daemon
+
+      - id: diagnostics
+        name: "Diagnostics"
+        command: "uv run python -m ems_diagnostics"
+        type: daemon
+
+      - id: ota_manager
+        name: "OTA Manager"
+        command: "uv run python -m ems_ota_manager"
+        type: daemon

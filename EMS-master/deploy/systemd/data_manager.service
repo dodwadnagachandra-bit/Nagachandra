@@ -1,0 +1,32 @@
+[Unit]
+Description=EMS Data Manager — L3 Data layer (POSIX shared memory RTDB, seqlock)
+Documentation=https://github.com/ReVx-Energy/EMS
+After=network.target
+PartOf=ems.target
+
+[Service]
+Type=simple
+# Note: C component (data_manager_c) is launched as subprocess by Python orchestrator
+ExecStart=/opt/ems/python/.venv/bin/python -m ems_data_manager
+Restart=on-failure
+RestartSec=5
+User=ems
+Group=ems
+WorkingDirectory=/opt/ems
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening — production (PROD-06)
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=/data /run/ems /dev/shm
+RuntimeDirectory=ems
+MemoryMax=256M
+MemoryHigh=200M
+CPUQuota=50%
+SystemCallFilter=@system-service
+
+[Install]
+WantedBy=ems.target

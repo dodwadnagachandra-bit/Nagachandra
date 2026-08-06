@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revx-energy.com/ems/schemas/control_config",
+  "title": "EMS Control Manager Configuration",
+  "description": "Operational parameters for the control_manager state machine. Defines SOC protection limits, power dispatch limits, source priority order, and state machine timing. This schema is hot-reloadable \u2014 changes take effect without restarting the service. Fields marked x-mutable: true can be updated at runtime via the HMI or API.",
+  "x-hot-reload": true,
+  "type": "object",
+  "required": [
+    "_schema_version",
+    "soc_limits",
+    "power_limits",
+    "source_priority",
+    "state_machine",
+    "derating",
+    "ramping"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version for migration detection. Must match the schema expected version."
+    },
+    "soc_limits": {
+      "type": "object",
+      "description": "State of Charge protection limits. Charge cutoff prevents overcharge; discharge cutoff prevents over-discharge. Both are mutable at runtime for adaptive control strategies.",
+      "required": [
+        "charge_cutoff_pct",
+        "discharge_cutoff_pct"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "charge_cutoff_pct": {
+          "type": "number",
+          "description": "Maximum SOC target for charging. Charging stops when SOC reaches this value. Typical range: 80-100%. Lower values extend cycle life at cost of usable capacity.",
+          "minimum": 80,
+          "maximum": 100,
+          "x-unit": "%",
+          "x-mutable": true
+        },
+        "discharge_cutoff_pct": {
+          "type": "number",
+          "description": "Minimum SOC limit before discharging is stopped. Prevents deep discharge which degrades cell chemistry. Typical range: 0-30%.",
+          "minimum": 0,
+          "maximum": 30,
+          "x-unit": "%",
+          "x-mutable": true
+        }
+      }
+    },
+    "power_limits": {
+      "type": "object",
+      "description": "Maximum charge and discharge power limits sent to the PCS. Limits can be reduced from rated capacity for grid code compliance, contractual constraints, or thermal protection.",
+      "required": [
+        "max_charge_kw",
+        "max_discharge_kw"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "max_charge_kw": {
+          "type": "number",
+          "description": "Maximum charge power command to PCS. Must not exceed PCS and battery rated charge power. Set lower for demand charge management or grid connection limits.",
+          "minimum": 0,
+          "x-unit": "kW",
+          "x-mutable": true
+        },
+        "max_discharge_kw": {
+          "type": "number",
+          "description": "Maximum discharge power command to PCS. Must not exceed PCS and battery rated discharge power. Set lower for grid export limits or ancillary service requirements.",
+          "minimum": 0,
+          "x-unit": "kW",
+          "x-mutable": true
+        }
+      }
+    },
+    "source_priority": {
+      "type": "object",
+      "description": "Energy source dispatch priority order. Defines which source is used first for load supply during day and night periods. Changes take effect on next control loop iteration.",
+      "required": [
+        "day_order",
+        "night_order"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "day_order": {
+          "type": "array",
+          "description": "Ordered list of energy sources for daytime dispatch (when solar is available). First source is used first. Example: [solar, grid, bess, dg] means solar is prioritized before grid, then BESS, then DG.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "solar",
+              "grid",
+              "bess",
+              "dg"
+            ]
+          },
+          "minItems": 1,
+          "x-mutable": true
+        },
+        "night_order": {
+          "type": "array",
+          "description": "Ordered list of energy sources for nighttime dispatch (when solar is unavailable). Example: [grid, bess, dg] means grid supply before BESS discharge, then DG backup.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "grid",
+              "bess",
+              "dg"
+            ]
+          },
+          "minItems": 1,
+          "x-mutable": true
+        }
+      }
+    },
+    "derating": {
+      "type": "object",
+      "description": "Temperature derating thresholds for BMS cells and PCS inverter. Linear power ramp-down applied between start and cutoff temperatures. Three zones evaluated independently — most restrictive wins. All fields are mutable at runtime.",
+      "required": [
+        "bms_high_start_c",
+        "bms_high_cutoff_c",
+        "pcs_high_start_c",
+        "pcs_high_cutoff_c",
+        "bms_low_start_c",
+        "bms_low_cutoff_c"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bms_high_start_c": {
+          "type": "number",
+          "description": "BMS cell temperature at which high-temp derating begins. Power ramps down linearly from this point to bms_high_cutoff_c. IEC 62619 lithium battery safe operating threshold.",
+          "x-unit": "°C",
+          "x-mutable": true
+        },
+        "bms_high_cutoff_c": {
+          "type": "number",
+          "description": "BMS cell temperature at which power is reduced to zero. Must be greater than bms_high_start_c. Prevents thermal runaway risk.",
+          "x-unit": "°C",
+          "x-mutable": true
+        },
+        "pcs_high_start_c": {
+          "type": "number",
+          "description": "PCS internal temperature at which high-temp derating begins. Power ramps down linearly to pcs_high_cutoff_c. Based on PCS V1.24 IGBT thermal limits.",
+          "x-unit": "°C",
+          "x-mutable": true
+        },
+        "pcs_high_cutoff_c": {
+          "type": "number",
+          "description": "PCS internal temperature at which power is reduced to zero. Must be greater than pcs_high_start_c.",
+          "x-unit": "°C",
+          "x-mutable": true
+        },
+        "bms_low_start_c": {
+          "type": "number",
+          "description": "BMS cell temperature at which cold derating begins. Power ramps down linearly as temperature falls toward bms_low_cutoff_c. Prevents lithium plating on graphite anodes.",
+          "x-unit": "°C",
+          "x-mutable": true
+        },
+        "bms_low_cutoff_c": {
+          "type": "number",
+          "description": "BMS cell temperature at which power is reduced to zero due to cold. Must be less than bms_low_start_c. Charging below 0°C causes irreversible lithium plating.",
+          "x-unit": "°C",
+          "x-mutable": true
+        }
+      }
+    },
+    "ramping": {
+      "type": "object",
+      "description": "Power setpoint ramp rate limits. Constrains how fast the PCS setpoint can change per second to prevent mechanical stress and grid disturbances. Applied using actual elapsed time (time.monotonic() delta), not configured loop interval.",
+      "required": [
+        "charge_ramp_kw_s",
+        "discharge_ramp_kw_s"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "charge_ramp_kw_s": {
+          "type": "number",
+          "description": "Maximum charge setpoint change rate in kW per second. Limits how fast charging power can increase or decrease. Lower values reduce PCS stress; higher values improve response speed.",
+          "minimum": 0.1,
+          "x-unit": "kW/s",
+          "x-mutable": true
+        },
+        "discharge_ramp_kw_s": {
+          "type": "number",
+          "description": "Maximum discharge setpoint change rate in kW per second. Limits how fast discharge power can change. Symmetric with charge_ramp_kw_s but independently configurable.",
+          "minimum": 0.1,
+          "x-unit": "kW/s",
+          "x-mutable": true
+        }
+      }
+    },
+    "state_machine": {
+      "type": "object",
+      "description": "Control loop timing and fault recovery parameters. loop_interval_ms is structural (affects real-time scheduling), fault_retry_count is operational.",
+      "required": [
+        "loop_interval_ms",
+        "fault_retry_count"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "loop_interval_ms": {
+          "type": "integer",
+          "description": "Control state machine execution interval. Defines how often the 1Hz control loop runs. Changing this requires scheduler reconfiguration \u2014 set x-mutable: false as it is a structural parameter.",
+          "minimum": 500,
+          "maximum": 2000,
+          "x-unit": "ms",
+          "x-mutable": false
+        },
+        "fault_retry_count": {
+          "type": "integer",
+          "description": "Number of consecutive faults before escalating to a protection trip. Higher values allow transient faults to self-clear; lower values improve response to persistent faults.",
+          "minimum": 0,
+          "maximum": 10,
+          "x-unit": "count",
+          "x-mutable": true
+        }
+      }
+    }
+  }
+}

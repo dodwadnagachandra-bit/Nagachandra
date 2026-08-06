@@ -1,0 +1,54 @@
+_schema_version: "1.0"
+
+# OTA firmware update configuration for ota_manager.
+# Controls staging area, A/B partition selection, Ed25519 verification,
+# download behaviour, post-update health check, and persistent state path.
+
+staging:
+  # Temporary directory for downloading and extracting OTA packages.
+  dir: /tmp/ems-ota
+  # Maximum allowed package size in megabytes. Downloads exceeding this limit
+  # are rejected before the body is transferred.
+  max_package_mb: 500
+
+partition:
+  # Atomic JSON file that records the currently active partition slot (a or b),
+  # previous slot, boot count, and pending health-check flag.
+  boot_flag_path: /var/lib/ems/boot_flag.json
+  # Block device for the A partition (active at factory).
+  active_device: /dev/mmcblk0p2
+  # Block device for the B partition (standby at factory).
+  standby_device: /dev/mmcblk0p3
+
+security:
+  # Hex-encoded 32-byte Ed25519 public key used to verify OTA package manifests.
+  # Replace this placeholder with the real key during commissioning.
+  public_key_hex: "1e1c2b7a1b429c8e47429f04a8b7d6ad7d0c2f9d83867fcca5dec73d9410df1d"  # dev key — replace during commissioning
+
+download:
+  # Maximum time in seconds to wait for the full download to complete.
+  timeout_s: 300
+  # HTTP streaming chunk size in bytes.
+  chunk_size: 65536
+  # Minimum interval in seconds between progress log messages.
+  progress_interval_s: 5
+
+health_check:
+  # Total time in seconds to wait for all managed services to become healthy
+  # after the device reboots into the new partition.
+  timeout_s: 300
+  # Polling interval in seconds between health check queries.
+  poll_interval_s: 10
+  # Systemd service units that must be active before the update is confirmed.
+  services:
+    - safety_manager
+    - comm_manager
+    - data_manager
+    - control_manager
+    - alarm_manager
+    - cloud_manager
+
+version:
+  # Persistent JSON file that records the current and previous firmware versions
+  # plus the overall OTA state machine state.
+  state_path: /var/lib/ems/ota_state.json

@@ -1,0 +1,29 @@
+# Cloud Manager Configuration — Residential Profile (50 kWh class)
+# MQTT over TLS 1.3 with mutual TLS (mTLS) certificate authentication
+# Validates against: config/schemas/cloud_config.schema.json
+
+_schema_version: "1.0"
+
+broker:
+  host: mqtt.revx-energy.com  # MQTT broker hostname; update at site commissioning
+  port: 8883                  # MQTT over TLS port [port]; 8883 is standard MQTTS
+  protocol: mqtts             # Transport: 'mqtts' (TLS, required) or 'mqtt' (unencrypted, never use in production)
+
+auth:
+  method: mtls                         # Auth method: 'mtls' (mutual TLS) or 'token'
+                                       # mTLS required for production security
+  ca_cert_path: /etc/ems/certs/ca.crt  # CA certificate for verifying broker TLS cert
+  client_cert_path: /etc/ems/certs/device.crt  # This device's client certificate
+  client_key_path: /etc/ems/certs/device.key   # Private key (chmod 600)
+
+telemetry:
+  interval_s: 60              # Telemetry publish interval [s]; range: 1-300s
+                              # 60s balances data granularity and cloud ingestion costs
+  topic_prefix: ems/RES-001   # MQTT topic prefix; must match cloud platform registration
+
+offline_buffer:
+  enabled: true               # Buffer telemetry locally during connectivity loss
+  max_hours: 24               # Maximum buffer retention [h]; range: 1-168h
+                              # 24h covers typical maintenance windows
+  max_mb: 50                  # Maximum buffer size [MB]; range: 1-500MB
+                              # 50MB is ample for 24h at 60s intervals

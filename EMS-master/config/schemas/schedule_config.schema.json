@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revx-energy.com/ems/schemas/schedule_config",
+  "title": "EMS Scheduler Configuration",
+  "description": "Charge/discharge scheduling configuration for the scheduler module. Defines operational mode (manual, time-of-day windows, or power curve), time windows, and day/night transition times. This schema is hot-reloadable \u2014 schedule changes take effect without restarting the service. All fields are x-mutable: true for live schedule editing from the HMI.",
+  "x-hot-reload": true,
+  "type": "object",
+  "required": [
+    "_schema_version",
+    "mode",
+    "time_windows",
+    "day_night",
+    "power_curve"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version for migration detection. Must match the schema expected version."
+    },
+    "mode": {
+      "type": "string",
+      "description": "Scheduler operating mode. 'manual' = operator dispatches via HMI commands; 'time_of_day' = automated charge/discharge windows; 'curve' = 15-minute interval power setpoint curve.",
+      "enum": [
+        "manual",
+        "time_of_day",
+        "curve"
+      ],
+      "x-mutable": true
+    },
+    "time_windows": {
+      "type": "array",
+      "description": "Array of time-of-day charge/discharge windows. Used when mode='time_of_day'. Windows define recurring daily schedules with start/end times and power setpoints.",
+      "items": {
+        "type": "object",
+        "description": "A single charge/discharge time window with start time, end time, action, and power setpoint.",
+        "required": [
+          "start",
+          "end",
+          "action",
+          "power_kw"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "type": "string",
+            "description": "Window start time in 24-hour HH:MM format. Example: '06:00' for 6 AM.",
+            "pattern": "^[0-2][0-9]:[0-5][0-9]$",
+            "x-mutable": true
+          },
+          "end": {
+            "type": "string",
+            "description": "Window end time in 24-hour HH:MM format. Example: '18:00' for 6 PM. End time may be on the following day (e.g., '06:00' end after '22:00' start).",
+            "pattern": "^[0-2][0-9]:[0-5][0-9]$",
+            "x-mutable": true
+          },
+          "action": {
+            "type": "string",
+            "description": "Scheduled action for this time window. 'charge' fills the battery; 'discharge' exports/supplies load; 'idle' holds current SOC.",
+            "enum": [
+              "charge",
+              "discharge",
+              "idle"
+            ],
+            "x-mutable": true
+          },
+          "power_kw": {
+            "type": "number",
+            "description": "Power setpoint for this window in kilowatts. Must be within max_charge_kw or max_discharge_kw limits defined in control_config.",
+            "x-unit": "kW",
+            "x-mutable": true
+          }
+        }
+      },
+      "x-mutable": true
+    },
+    "day_night": {
+      "type": "object",
+      "description": "Day/night transition times used by control_manager source_priority selection. Defines when the system switches between day_order and night_order dispatch priorities.",
+      "required": [
+        "day_start",
+        "night_start"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "day_start": {
+          "type": "string",
+          "description": "Time when daytime mode begins (solar priority active). 24-hour HH:MM format. Example: '06:00'.",
+          "pattern": "^[0-2][0-9]:[0-5][0-9]$",
+          "x-mutable": true
+        },
+        "night_start": {
+          "type": "string",
+          "description": "Time when nighttime mode begins (solar inactive). 24-hour HH:MM format. Example: '18:00'.",
+          "pattern": "^[0-2][0-9]:[0-5][0-9]$",
+          "x-mutable": true
+        }
+      }
+    },
+    "power_curve": {
+      "type": "array",
+      "description": "96-point daily power setpoint curve at 15-minute intervals. Used when mode='curve'. Index 0 = 00:00-00:15, index 95 = 23:45-00:00. Positive = discharge (kW export), negative = charge (kW import). All 96 points must be provided.",
+      "items": {
+        "type": "number",
+        "description": "Power setpoint for this 15-minute interval in kW. Positive = discharge, negative = charge.",
+        "x-unit": "kW"
+      },
+      "minItems": 96,
+      "maxItems": 96,
+      "x-mutable": true
+    }
+  }
+}
