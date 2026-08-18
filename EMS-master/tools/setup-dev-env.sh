@@ -240,7 +240,7 @@ if ! command -v code &>/dev/null; then
     info "Installing VS Code..."
     wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /tmp/ms-vscode.gpg
     sudo install -D -o root -g root -m 644 /tmp/ms-vscode.gpg /etc/apt/keyrings/microsoft.gpg
-    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | \
+    echo "deb [arch=arm64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | \
         sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
     rm -f /tmp/ms-vscode.gpg
     sudo apt-get update -y

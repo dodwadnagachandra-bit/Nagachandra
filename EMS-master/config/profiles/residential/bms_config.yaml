@@ -10,7 +10,7 @@ can:
   # Use 'can0' for physical hardware (ECU-1170 onboard CAN).
   # Use 'vcan0' for virtual CAN during development and simulation.
   # Required.
-  interface: "vcan0"
+  interface: "can0"
 
   # CAN bus bitrate in bits per second.
   # Must match the hardware BMS configuration.

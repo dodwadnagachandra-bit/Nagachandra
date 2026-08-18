@@ -17,7 +17,7 @@ import signal
 import sys
 from pathlib import Path
 
-import zmq.asyncio
+import zmq
 
 from ems_common.rtdb import attach_rtdb, detach_rtdb
 
@@ -65,7 +65,7 @@ async def run(args: argparse.Namespace) -> None:
         rtdb.racks_per_cluster,
     )
 
-    ctx = zmq.asyncio.Context()
+    ctx = zmq.Context()
 
     publisher = TelemetryPublisher(rtdb, ctx)
     health = HealthMonitor(rtdb, publisher.pub_socket, stale_threshold_ms=args.stale_threshold)

@@ -35,7 +35,7 @@ phases:
     processes:
       - id: can_sim
         name: "CAN Simulator"
-        command: "uv run python -m tools.simulators.can_sim --interface vcan0 --config config/profiles/{profile}/bms_config.yaml"
+        command: "uv run python -m tools.simulators.can_sim --interface can0 --config config/profiles/{profile}/bms_config.yaml"
         type: daemon
         health_check:
           type: command
@@ -89,7 +89,7 @@ phases:
     processes:
       - id: comm_manager_c
         name: "Comm Manager (C)"
-        command: "./build/src/comm_manager/c/comm_manager_c --interface vcan0 --base-id 0x18FF0003"
+        command: "./build/src/comm_manager/c/comm_manager_c --interface can0 --base-id 0x18FF0003"
         type: daemon
 
       - id: comm_manager_py
