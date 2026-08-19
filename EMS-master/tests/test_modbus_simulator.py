@@ -354,7 +354,7 @@ async def _tcp_roundtrip_read() -> None:
         assert client.connected
 
         # Read AC voltage L1 (address 0x0001)
-        result = await client.read_holding_registers(address=0x0001, count=1)
+        result = await client.read_holding_registers(address=0x0001, count=1,device_id=1)
         assert not result.isError(), f"Read error: {result}"
         # Should be near default 2300 (230V * 10) or telemetry-updated
         assert result.registers[0] > 0
@@ -505,7 +505,7 @@ def test_rtu_roundtrip_read() -> None:
             await client.connect()
             assert client.connected
 
-            result = await client.read_holding_registers(address=0x0001, count=1, slave=1)
+            result = await client.read_holding_registers(address=0x0001, count=1, device_id=1)
             assert not result.isError(), f"RTU read error: {result}"
             assert result.registers[0] > 0
 
