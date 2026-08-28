@@ -76,6 +76,8 @@ typedef struct
     float    Delta_v;         /* V    - Difference between the  voltages  */
     uint32_t fault_code;      /* BMS fault bitmap                        */
     uint8_t  online;          /* 0=offline, 1=online (comm status)       */
+
+    
 } ems_rack_t;
 
 /** Battery cluster — group of racks on one CAN bus. */
