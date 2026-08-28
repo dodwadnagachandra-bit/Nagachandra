@@ -1,0 +1,87 @@
+# pcs_config.yaml — PCS Communication Configuration (Active Config)
+# Schema: config/schemas/pcs_config.schema.json
+# This is the active configuration loaded by the EMS at startup.
+# Edit this file to configure the PCS. Validate with: make validate
+#
+# This file ships pre-populated with the Residential profile (Modbus RTU).
+# For Modbus TCP, replace device/baud_rate/parity/stopbits with host/port.
+
+_schema_version: "1.0"
+
+connection:
+  # Modbus transport protocol.
+  # Valid values: rtu | tcp
+  # Required.
+  protocol: "rtu"
+
+  # Modbus slave/unit ID of the PCS device.
+  # Valid range: 1 to 247
+  # Required.
+  slave_id: 1
+
+  # Serial device path for Modbus RTU (RS485).
+  # On ECU-1170: RS485-1 = /dev/ttyS1, RS485-2 = /dev/ttyS2, etc.
+  # Required when protocol = rtu.
+  device: "/dev/ttyUSB0"
+
+  # Serial baud rate for Modbus RTU.
+  # Must match the PCS hardware configuration.
+  # Valid values: 9600 | 19200 | 38400 | 115200
+  # Unit: bps
+  # Required when protocol = rtu.
+  baud_rate: 9600
+
+  # Serial parity for Modbus RTU.
+  # N=None, E=Even, O=Odd.
+  # Required when protocol = rtu.
+  parity: "N"
+
+  # Number of serial stop bits.
+  # Valid values: 1 | 2.
+  stopbits: 1
+
+# Path to the PCS Modbus register map definition (synthetic V1.24).
+# Swap with the real V1.24 register map when the document arrives.
+register_map_path: "config/pcs_register_map.yaml"
+
+registers:
+  # Modbus register for active power setpoint command.
+  # PCS V1.24: 0x500E (decimal 20494). Write in kW * 10.
+  # Required.
+  power_setpoint: 0x500E
+
+  # Modbus register for PCS on/off control.
+  # PCS V1.24: 0x0291 (decimal 657). Write 1=on, 0=off.
+  # Required.
+  on_off_control: 0x0291
+
+  # Modbus register for AC voltage readback.
+  # Required.
+  voltage_read: 0x0001
+
+  # Modbus register for AC current readback.
+  # Required.
+  current_read: 0x0002
+
+  # Modbus register for AC frequency readback.
+  # Required.
+  frequency_read: 0x0003
+
+timing:
+  # Polling interval for PCS Modbus registers.
+  # Valid range: 100 to 5000
+  # Unit: ms
+  # Required.
+  poll_interval_ms: 500
+
+  # Modbus request timeout.
+  # Valid range: 500 to 10000
+  # Unit: ms
+  # Required.
+  timeout_ms: 3000
+
+  # Retry attempts for failed Modbus requests.
+  # Valid range: 0 to 10
+  # Unit: count
+  # Required.
+  retry_count: 3

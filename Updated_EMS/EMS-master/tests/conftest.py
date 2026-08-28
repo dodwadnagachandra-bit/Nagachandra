@@ -1,0 +1,1 @@
+"""EMS integration test fixtures."""

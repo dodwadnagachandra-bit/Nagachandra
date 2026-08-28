@@ -1,0 +1,32 @@
+# bms_config.yaml — BMS Communication Configuration (Container Profile)
+# Schema: config/schemas/bms_config.schema.json
+# Container 6+ MWh class — 1 Mbps CAN FD for high-density topology
+
+_schema_version: "1.0"
+
+can:
+  # CAN network interface name.
+  interface: "vcan0"
+
+  # CAN bus bitrate [bps]; valid: 250000, 500000, 1000000
+  # 1 Mbps for container: faster cycle time needed for 64 racks
+  bitrate: 1000000
+
+  # CAN FD enabled for container class to handle higher data volume
+  fd_enabled: false
+
+  # Path to DBC file for CAN message decoding
+  dbc_path: "config/bms_layer2.dbc"
+
+  # Base CAN arbitration ID for BMU master
+  base_id: 0x98FF0003
+
+timing:
+  # Fast message polling interval [ms]; range: 100-1000ms
+  fast_cycle_ms: 300
+
+  # Slow message polling interval [ms]; range: 1000-5000ms
+  slow_cycle_ms: 2000
+
+  # BMS communication timeout [ms]; range: 1000-30000ms
+  timeout_ms: 5000

@@ -1,0 +1,31 @@
+[Unit]
+Description=EMS Cloud Manager — L5 Cloud layer (MQTT/TLS 1.3, mTLS, port 8883)
+Documentation=https://github.com/ReVx-Energy/EMS
+After=network.target data_manager.service
+PartOf=ems.target
+
+[Service]
+Type=simple
+ExecStart=/opt/ems/python/.venv/bin/python -m ems_cloud_manager
+Restart=on-failure
+RestartSec=5
+User=ems
+Group=ems
+WorkingDirectory=/opt/ems
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening — production (PROD-06)
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=/data /run/ems /dev/shm
+RuntimeDirectory=ems
+MemoryMax=256M
+MemoryHigh=200M
+CPUQuota=50%
+SystemCallFilter=@system-service
+
+[Install]
+WantedBy=ems.target

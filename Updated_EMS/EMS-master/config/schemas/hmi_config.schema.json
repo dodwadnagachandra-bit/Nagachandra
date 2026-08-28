@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revx-energy.com/ems/schemas/hmi_config",
+  "title": "EMS HMI Server Configuration",
+  "description": "Configuration for the hmi_server module. Defines HTTP server port, operator authentication, and display settings for the React HMI touchscreen interface.",
+  "type": "object",
+  "required": [
+    "_schema_version",
+    "server",
+    "auth",
+    "display"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "string",
+      "const": "2.0",
+      "description": "Schema version for migration detection. Must match the schema expected version."
+    },
+    "server": {
+      "type": "object",
+      "description": "HTTP server binding parameters. The HMI server runs a FastAPI backend serving the React frontend, REST API, and WebSocket streams over a single HTTP port (WebSocket is multiplexed via FastAPI on the same port).",
+      "required": [
+        "http_port",
+        "host"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "http_port": {
+          "type": "integer",
+          "description": "HTTP port for serving the React HMI frontend, REST API, and WebSocket connections. Default: 8080. Must be above 1024 for non-root operation.",
+          "minimum": 1024,
+          "maximum": 65535,
+          "x-unit": "port"
+        },
+        "host": {
+          "type": "string",
+          "description": "Network interface to bind the HMI server. '0.0.0.0' binds all interfaces (accessible from network); '127.0.0.1' restricts to localhost only.",
+          "default": "0.0.0.0"
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "description": "HMI user authentication settings. Two access levels: operator (read-only + basic commands) and admin (full configuration access). Pins are stored as bcrypt hashes \u2014 never store plain-text PINs.",
+      "required": [
+        "operator_pin_hash",
+        "admin_pin_hash",
+        "session_timeout_s"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "operator_pin_hash": {
+          "type": "string",
+          "description": "bcrypt hash of the operator PIN code. Operator role allows viewing all data and issuing start/stop commands. Generate with: python3 -c \"import bcrypt; print(bcrypt.hashpw(b'1234', bcrypt.gensalt()).decode())\". Never store the plain-text PIN."
+        },
+        "admin_pin_hash": {
+          "type": "string",
+          "description": "bcrypt hash of the admin PIN code. Admin role allows changing configuration, alarm thresholds, and schedules. Use a strong PIN (6+ digits). Generate same as operator_pin_hash."
+        },
+        "session_timeout_s": {
+          "type": "integer",
+          "description": "Automatic session timeout in seconds. HMI will return to locked state after this period of inactivity. Range: 60s (1 min) to 7200s (2 hours). Typical: 1800s (30 min).",
+          "minimum": 60,
+          "maximum": 7200,
+          "x-unit": "s"
+        }
+      }
+    },
+    "display": {
+      "type": "object",
+      "description": "HMI display and refresh settings for the touchscreen interface.",
+      "required": [
+        "refresh_interval_ms",
+        "kiosk_mode",
+        "screen_size"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "refresh_interval_ms": {
+          "type": "integer",
+          "description": "Dashboard data refresh interval in milliseconds. Determines how frequently the HMI polls for updated telemetry. Shorter intervals improve responsiveness but increase CPU load.",
+          "minimum": 500,
+          "maximum": 5000,
+          "x-unit": "ms"
+        },
+        "kiosk_mode": {
+          "type": "boolean",
+          "description": "Enable kiosk mode for dedicated touchscreen installations. When true, the browser runs fullscreen without navigation controls, preventing operator access to the underlying OS."
+        },
+        "screen_size": {
+          "type": "string",
+          "description": "Target screen size for UI layout optimization. Selects the appropriate CSS breakpoint and component sizing for the installed touchscreen.",
+          "enum": [
+            "7inch",
+            "10inch",
+            "15inch"
+          ]
+        }
+      }
+    }
+  }
+}

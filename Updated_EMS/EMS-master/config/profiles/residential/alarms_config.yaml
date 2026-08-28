@@ -1,0 +1,66 @@
+# Alarms Configuration — Residential Profile (50 kWh class)
+# Hot-reloadable: threshold changes take effect without service restart (IEC 62682)
+# Validates against: config/schemas/alarms_config.schema.json
+
+_schema_version: "1.0"
+
+defaults:
+  hysteresis_pct: 2        # Default hysteresis as % of threshold [%]; range: 0-10%
+                           # 2% prevents alarm chattering near boundary
+  delay_ms: 5000           # Default alarm activation delay [ms]; range: 0-30000ms
+                           # 5s filters transient spikes in sensor readings
+
+rules:
+  cell_voltage_high:
+    signal: bms.cell_voltage_max     # RTDB signal path — maximum cell voltage from BMU
+    severity: warning                # IEC 62682: warning=attention, action=immediate, protection=auto trip
+    high_threshold: 3.65             # Trigger above 3.65V [V] — LFP overcharge boundary
+    enabled: true                    # Alarm is active
+
+  cell_voltage_low:
+    signal: bms.cell_voltage_min     # RTDB signal path — minimum cell voltage from BMU
+    severity: protection             # Protection: automatic trip to prevent cell damage
+    low_threshold: 2.8               # Trigger below 2.8V [V] — LFP deep discharge boundary
+    enabled: true
+
+  cell_temp_high:
+    signal: bms.cell_temp_max        # RTDB signal path — maximum cell temperature from BMU
+    severity: action                 # Action: immediate operator intervention required
+    high_threshold: 45               # Trigger above 45°C [°C] — LFP high temp limit
+    enabled: true
+
+  cell_temp_low:
+    signal: bms.cell_temp_min        # RTDB signal path — minimum cell temperature from BMU
+    severity: action                 # Action: trigger heating system response
+    low_threshold: 0                 # Trigger below 0°C [°C] — lithium plating risk below 0°C
+    enabled: true
+
+  soc_high:
+    signal: bms.soc_pct              # RTDB signal path — battery state of charge
+    severity: warning                # Warning: approaching charge cutoff limit
+    high_threshold: 98               # Trigger above 98% [%] — warn before 100% hardware protection
+    enabled: true
+
+  soc_low:
+    signal: bms.soc_pct              # RTDB signal path — battery state of charge
+    severity: protection             # Protection: automatic discharge cutoff
+    low_threshold: 5                 # Trigger below 5% [%] — hard protection limit
+    enabled: true
+
+  pcs_overtemp:
+    signal: pcs.internal_temp_c      # RTDB signal path — PCS inverter internal temperature
+    severity: action                 # Action: reduce power or shutdown PCS
+    high_threshold: 75               # Trigger above 75°C [°C] — PCS derating threshold
+    enabled: true
+
+  bus_voltage_high:
+    signal: bms.bus_voltage_v        # RTDB signal path — DC bus voltage
+    severity: protection             # Protection: isolate before overvoltage damage
+    high_threshold: 600              # Trigger above 600V [V] — 500V-class BESS maximum
+    enabled: true
+
+  bus_voltage_low:
+    signal: bms.bus_voltage_v        # RTDB signal path — DC bus voltage
+    severity: protection             # Protection: below PCS minimum operating voltage
+    low_threshold: 400               # Trigger below 400V [V] — PCS minimum input voltage
+    enabled: true

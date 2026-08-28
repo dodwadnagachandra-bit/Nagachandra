@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReVx EMS — Hardware Architecture</title>
+<style>
+  @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+  :root {
+    --bg: #f8f9fb;
+    --surface: #ffffff;
+    --border: #d0d5dd;
+    --border-light: #e4e7ec;
+    --text-primary: #101828;
+    --text-secondary: #475467;
+    --text-muted: #98a2b3;
+    --shadow-sm: 0 1px 2px rgba(16,24,40,0.05);
+    --shadow-md: 0 4px 12px rgba(16,24,40,0.08);
+    --shadow-lg: 0 12px 32px rgba(16,24,40,0.12);
+
+    --ecu-color: #1e293b;
+    --ecu-bg: #f1f5f9;
+    --can-color: #dc2626;
+    --rs485-color: #059669;
+    --eth-color: #2563eb;
+    --gpio-color: #d97706;
+    --safety-color: #dc2626;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    padding: 40px;
+  }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+
+  .page-header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.4px; margin-bottom: 6px; }
+  .page-header p { font-size: 14px; color: var(--text-secondary); }
+
+  .hw-layout {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 200px 1fr 200px;
+    grid-template-rows: auto auto auto auto auto;
+    gap: 0;
+    position: relative;
+  }
+
+  /* ═══ CENTRAL ECU BOX ═══ */
+  .ecu-box {
+    grid-column: 2;
+    grid-row: 1 / 6;
+    background: var(--surface);
+    border: 2.5px solid var(--ecu-color);
+    border-radius: 14px;
+    padding: 28px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+    position: relative;
+  }
+
+  .ecu-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border-light);
+  }
+
+  .ecu-header .ecu-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--ecu-color);
+    color: white;
+    padding: 3px 12px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+
+  .ecu-header h2 { font-size: 20px; font-weight: 700; color: var(--ecu-color); }
+  .ecu-header .ecu-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  .ecu-specs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .spec-item {
+    background: var(--ecu-bg);
+    border-radius: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-light);
+  }
+
+  .spec-item .spec-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .spec-item .spec-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  /* ═══ INTERFACE PORTS (inside ECU) ═══ */
+  .ports-section {
+    margin-top: 4px;
+  }
+
+  .ports-section h3 {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+
+  .ports-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .port-card {
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1.5px solid;
+    position: relative;
+  }
+
+  .port-card .port-icon {
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .port-card .port-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .port-card .port-detail {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  .port-card.can { border-color: var(--can-color); background: #fef2f2; }
+  .port-card.can .port-name { color: var(--can-color); }
+
+  .port-card.rs485 { border-color: var(--rs485-color); background: #ecfdf5; }
+  .port-card.rs485 .port-name { color: var(--rs485-color); }
+
+  .port-card.eth { border-color: var(--eth-color); background: #eff6ff; }
+  .port-card.eth .port-name { color: var(--eth-color); }
+
+  .port-card.gpio { border-color: var(--gpio-color); background: #fffbeb; }
+  .port-card.gpio .port-name { color: var(--gpio-color); }
+
+  .port-card.misc { border-color: #94a3b8; background: #f8fafc; }
+  .port-card.misc .port-name { color: #475467; }
+
+  /* ═══ SIDE PANELS (LEFT + RIGHT devices) ═══ */
+  .devices-left {
+    grid-column: 1;
+    grid-row: 1 / 6;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-right: 16px;
+    justify-content: center;
+  }
+
+  .devices-right {
+    grid-column: 3;
+    grid-row: 1 / 6;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-left: 16px;
+    justify-content: center;
+  }
+
+  .device-card {
+    border-radius: 8px;
+    padding: 12px 14px;
+    border: 1.5px solid;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    background: var(--surface);
+  }
+
+  .device-card .dev-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .device-card .dev-proto {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: white;
+  }
+
+  .device-card .dev-name {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .device-card .dev-detail {
+    font-size: 10px;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  /* connector line stub */
+  .device-card::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 16px;
+    height: 2px;
+  }
+
+  .devices-left .device-card::after {
+    right: -16px;
+  }
+
+  .devices-right .device-card::after {
+    left: -16px;
+  }
+
+  .device-card.can-dev { border-color: var(--can-color); }
+  .device-card.can-dev .dev-name { color: var(--can-color); }
+  .device-card.can-dev .dev-proto { background: var(--can-color); }
+  .device-card.can-dev::after { background: var(--can-color); }
+
+  .device-card.rs485-dev { border-color: var(--rs485-color); }
+  .device-card.rs485-dev .dev-name { color: var(--rs485-color); }
+  .device-card.rs485-dev .dev-proto { background: var(--rs485-color); }
+  .device-card.rs485-dev::after { background: var(--rs485-color); }
+
+  .device-card.eth-dev { border-color: var(--eth-color); }
+  .device-card.eth-dev .dev-name { color: var(--eth-color); }
+  .device-card.eth-dev .dev-proto { background: var(--eth-color); }
+  .device-card.eth-dev::after { background: var(--eth-color); }
+
+  .device-card.gpio-dev { border-color: var(--gpio-color); }
+  .device-card.gpio-dev .dev-name { color: var(--gpio-color); }
+  .device-card.gpio-dev .dev-proto { background: var(--gpio-color); }
+  .device-card.gpio-dev::after { background: var(--gpio-color); }
+
+  .device-card.safety-dev { border-color: var(--safety-color); border-style: solid; border-width: 2px; }
+  .device-card.safety-dev .dev-name { color: var(--safety-color); }
+  .device-card.safety-dev .dev-proto { background: var(--safety-color); }
+  .device-card.safety-dev::after { background: var(--safety-color); }
+
+  /* ═══ BOTTOM: ENVIRONMENT ═══ */
+  .env-bar {
+    max-width: 1100px;
+    margin: 24px auto 0;
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .env-chip {
+    font-size: 11px;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    padding: 6px 14px;
+    color: var(--text-secondary);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .env-chip strong {
+    color: var(--text-primary);
+  }
+
+  /* ═══ LEGEND ═══ */
+  .legend {
+    max-width: 1100px;
+    margin: 24px auto 0;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+
+  .legend-line {
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>ReVx EMS — Hardware Architecture</h1>
+  <p>Advantech ECU-1170-552A · TI AM6548 · Physical Interfaces & Field Device Connections</p>
+</div>
+
+<div class="hw-layout">
+
+  <!-- ═══ LEFT DEVICES ═══ -->
+  <div class="devices-left">
+
+    <div class="device-card can-dev">
+      <div class="dev-header">
+        <span class="dev-proto">CAN</span>
+        <span class="dev-name">BMU Cluster 1</span>
+      </div>
+      <div class="dev-detail">CAN0 · DBC Layer 2<br>BMU→EMS: SOC, V, I, faults</div>
+    </div>
+
+    <div class="device-card can-dev">
+      <div class="dev-header">
+        <span class="dev-proto">CAN</span>
+        <span class="dev-name">BMU Cluster 2</span>
+      </div>
+      <div class="dev-detail">CAN1 · DBC Layer 2<br>Parallel cluster support</div>
+    </div>
+
+    <div class="device-card rs485-dev">
+      <div class="dev-header">
+        <span class="dev-proto">RS485</span>
+        <span class="dev-name">PCS Inverter</span>
+      </div>
+      <div class="dev-detail">RS485-1 · Modbus RTU 9600/8N1<br>Slave ID 1 · Setpoint + telemetry</div>
+    </div>
+
+    <div class="device-card rs485-dev">
+      <div class="dev-header">
+        <span class="dev-proto">RS485</span>
+        <span class="dev-name">Energy Meter</span>
+      </div>
+      <div class="dev-detail">RS485-2 · Modbus RTU 9600/8N1<br>Schneider PM5xxx · Revenue-grade</div>
+    </div>
+
+  </div>
+
+  <!-- ═══ CENTRAL ECU ═══ -->
+  <div class="ecu-box">
+
+    <div class="ecu-header">
+      <span class="ecu-tag">ECU-1170-552A</span>
+      <h2>Advantech EMS Controller</h2>
+      <div class="ecu-sub">TI AM6548: 4×Cortex-A53 + 2×Cortex-R5 · Industrial -40°C to +70°C · CE/FCC/UL</div>
+    </div>
+
+    <div class="ecu-specs">
+      <div class="spec-item">
+        <div class="spec-label">Processor</div>
+        <div class="spec-value">TI AM6548<br>4×A53 + 2×R5</div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-label">Memory</div>
+        <div class="spec-value">4 GB DDR4<br>64 GB eMMC</div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-label">Storage</div>
+        <div class="spec-value">256–512 GB NVMe SSD<br>Parquet + DuckDB</div>
+      </div>
+      <div class="spec-item">
+        <div class="spec-label">Display</div>
+        <div class="spec-value">HDMI → 10″ Touch<br>React HMI</div>
+      </div>
+    </div>
+
+    <div class="ports-section">
+      <h3>Physical Interfaces</h3>
+      <div class="ports-grid">
+        <div class="port-card can">
+          <div class="port-name">CAN0 / CAN1</div>
+          <div class="port-detail">2× CAN 2.0B isolated<br>BMS clusters (DBC)</div>
+        </div>
+        <div class="port-card rs485">
+          <div class="port-name">RS485 × 4</div>
+          <div class="port-detail">4× isolated serial<br>PCS, Meter, BTMS, DG/PV</div>
+        </div>
+        <div class="port-card eth">
+          <div class="port-name">ETH0 (LAN)</div>
+          <div class="port-detail">GbE · 192.168.1.x<br>HMI, PCS TCP, Meter</div>
+        </div>
+        <div class="port-card eth">
+          <div class="port-name">ETH1 (WAN)</div>
+          <div class="port-detail">GbE · DHCP/Static<br>Cloud MQTT/TLS, NTP</div>
+        </div>
+        <div class="port-card gpio">
+          <div class="port-name">DI × 8</div>
+          <div class="port-detail">ACDB, Flood, Smoke, Heat,<br>E-Stop (dual-ch), Fire Ext</div>
+        </div>
+        <div class="port-card gpio">
+          <div class="port-name">DO × 8</div>
+          <div class="port-detail">ACDB Trip, Extinguisher,<br>Lamps, PCS Em Stop, Siren</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ RIGHT DEVICES ═══ -->
+  <div class="devices-right">
+
+    <div class="device-card rs485-dev">
+      <div class="dev-header">
+        <span class="dev-proto">RS485</span>
+        <span class="dev-name">BTMS Controller</span>
+      </div>
+      <div class="dev-detail">RS485-3 · Modbus RTU 9600/8N1<br>Liquid or air-cooled · Slave ID 3</div>
+    </div>
+
+    <div class="device-card rs485-dev">
+      <div class="dev-header">
+        <span class="dev-proto">RS485</span>
+        <span class="dev-name">DG / PV Inverter</span>
+      </div>
+      <div class="dev-detail">RS485-4 · Modbus RTU 9600/8N1<br>Slave ID 4/5 · Backup + solar</div>
+    </div>
+
+    <div class="device-card eth-dev">
+      <div class="dev-header">
+        <span class="dev-proto">TCP</span>
+        <span class="dev-name">Cloud / MQTT Broker</span>
+      </div>
+      <div class="dev-detail">ETH1 (WAN) · TLS 1.3<br>Port 8883 · mTLS · NTP sync</div>
+    </div>
+
+    <div class="device-card safety-dev">
+      <div class="dev-header">
+        <span class="dev-proto">GPIO</span>
+        <span class="dev-name">Safety I/O</span>
+      </div>
+      <div class="dev-detail">
+        E-Stop PB (DI-6+7 dual-ch)<br>
+        Smoke+Heat (DI-3+4)<br>
+        PCS Em Stop (DO-5)<br>
+        ACDB Shunt Trip (DO-0)
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ═══ ENVIRONMENT / CERTS ═══ -->
+<div class="env-bar">
+  <span class="env-chip"><strong>Temp:</strong> -40°C to +70°C</span>
+  <span class="env-chip"><strong>Certs:</strong> CE / FCC / UL</span>
+  <span class="env-chip"><strong>OS:</strong> Linux (Yocto)</span>
+  <span class="env-chip"><strong>Power:</strong> 9–36V DC</span>
+  <span class="env-chip"><strong>Safety:</strong> ASIL-B / SIL-2 (R5 core)</span>
+  <span class="env-chip"><strong>SSD:</strong> LUKS encrypted</span>
+</div>
+
+<!-- ═══ LEGEND ═══ -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-line" style="background: var(--can-color);"></div>CAN 2.0B / FD — BMS</div>
+  <div class="legend-item"><div class="legend-line" style="background: var(--rs485-color);"></div>RS485 Modbus RTU — PCS, Meter, BTMS, DG, PV</div>
+  <div class="legend-item"><div class="legend-line" style="background: var(--eth-color);"></div>Ethernet — LAN (HMI/TCP) + WAN (MQTT/NTP)</div>
+  <div class="legend-item"><div class="legend-line" style="background: var(--gpio-color);"></div>GPIO — Digital I/O (Safety, Status)</div>
+  <div class="legend-item"><div class="legend-line" style="background: var(--safety-color); height: 3px; border-style: double;"></div>Safety-Critical Path</div>
+</div>
+
+</body>
+</html>

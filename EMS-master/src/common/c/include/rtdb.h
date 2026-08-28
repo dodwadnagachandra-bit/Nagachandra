@@ -69,6 +69,10 @@ typedef struct
     float    max_cell_t;      /* degC — maximum cell temperature in rack */
     float    avg_cell_t;      /* degC — average cell temperature in rack */
 
+    float    max_cell_num;    /*      -   indicates cell number with maximum voltage */
+    float    min_cell_num;    /*      -   indicates cell number with minimum voltage */
+
+
     uint32_t fault_code;      /* BMS fault bitmap                        */
     uint8_t  online;          /* 0=offline, 1=online (comm status)       */
 } ems_rack_t;

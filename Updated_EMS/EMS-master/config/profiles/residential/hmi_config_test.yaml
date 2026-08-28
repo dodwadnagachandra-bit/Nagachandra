@@ -1,0 +1,22 @@
+# HMI Server Configuration -- Test Profile
+# Known bcrypt PIN hashes for integration testing:
+#   operator PIN: "1234"
+#   admin PIN:    "9999"
+# Validates against: config/schemas/hmi_config.schema.json
+
+_schema_version: "1.0"
+
+server:
+  http_port: 0              # Tests override with allocated port
+  websocket_port: 0          # Tests override with allocated port
+  host: "127.0.0.1"          # Localhost only for test isolation
+
+auth:
+  operator_pin_hash: "$2b$12$4Xa.noxJKn0eHuc.m39UFO8DzOHQVaa6Tzf2ZhCqsyPzcatHlKpVO"   # bcrypt("1234")
+  admin_pin_hash: "$2b$12$1Pm7NYV9swte2rTbhuZnXeQjQEyN7vtC.mc42mMEvQmhAHBs.UcVe"       # bcrypt("9999")
+  session_timeout_s: 300     # 5 min -- shorter for testing
+
+display:
+  refresh_interval_ms: 1000  # Dashboard data refresh interval [ms]
+  kiosk_mode: false
+  screen_size: "10inch"

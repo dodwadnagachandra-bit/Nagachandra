@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revx-energy.com/ems/schemas/system_config",
+  "title": "EMS System Configuration",
+  "description": "Top-level system identity and battery topology configuration for the EMS. Defines site metadata and the physical layout of the BESS (clusters, racks, modules, cells).",
+  "type": "object",
+  "required": ["_schema_version", "system", "topology"],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version for migration detection. Must match the schema's expected version."
+    },
+    "system": {
+      "type": "object",
+      "description": "Site identification and firmware metadata.",
+      "required": ["site_id", "site_name"],
+      "additionalProperties": false,
+      "properties": {
+        "site_id": {
+          "type": "string",
+          "description": "Unique site identifier used in telemetry and cloud data. Example: RES-001, COM-042."
+        },
+        "site_name": {
+          "type": "string",
+          "description": "Human-readable site name for display in HMI and dashboards."
+        },
+        "firmware_version": {
+          "type": "string",
+          "description": "EMS firmware version string in semver format (e.g., 1.0.0)."
+        },
+        "model": {
+          "type": "string",
+          "description": "Deployment scale tier. Determines default parameter sets and UI layout.",
+          "enum": ["residential", "commercial", "container"]
+        }
+      }
+    },
+    "topology": {
+      "type": "object",
+      "description": "Physical layout of the battery energy storage system. All fields are required to compute total capacity and validate CAN address ranges.",
+      "required": [
+        "cluster_count",
+        "racks_per_cluster",
+        "modules_per_rack",
+        "cells_per_module",
+        "temps_per_module"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cluster_count": {
+          "type": "integer",
+          "description": "Number of independent battery clusters. Each cluster has its own BMU master.",
+          "minimum": 1,
+          "maximum": 8,
+          "x-unit": "count"
+        },
+        "racks_per_cluster": {
+          "type": "integer",
+          "description": "Number of BMU racks (slave units) per cluster.",
+          "minimum": 1,
+          "maximum": 16,
+          "x-unit": "count"
+        },
+        "modules_per_rack": {
+          "type": "integer",
+          "description": "Number of LMU battery modules per rack.",
+          "minimum": 3,
+          "maximum": 20,
+          "x-unit": "count"
+        },
+        "cells_per_module": {
+          "type": "integer",
+          "description": "Number of series-connected cells per battery module.",
+          "minimum": 16,
+          "maximum": 108,
+          "x-unit": "count"
+        },
+        "temps_per_module": {
+          "type": "integer",
+          "description": "Number of NTC temperature sensors per battery module.",
+          "minimum": 4,
+          "maximum": 40,
+          "x-unit": "count"
+        }
+      }
+    },
+    "subsystems": {
+      "type": "object",
+      "description": "Declares which optional hardware subsystems are present at this site. Config_manager only loads device configs for declared subsystems.",
+      "additionalProperties": false,
+      "properties": {
+        "has_dg": {
+          "type": "boolean",
+          "description": "Whether a diesel generator is present at this site.",
+          "default": false
+        },
+        "has_pv": {
+          "type": "boolean",
+          "description": "Whether a solar PV inverter is present at this site.",
+          "default": false
+        },
+        "has_btms": {
+          "type": "boolean",
+          "description": "Whether a battery thermal management system is present.",
+          "default": true
+        },
+        "has_meter": {
+          "type": "boolean",
+          "description": "Whether an energy meter is present at this site.",
+          "default": true
+        }
+      }
+    }
+  }
+}

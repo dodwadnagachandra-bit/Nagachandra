@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revx-energy.com/ems/schemas/bms_config",
+  "title": "EMS BMS Communication Configuration",
+  "description": "CAN bus and timing configuration for Battery Management System (BMS) communication. The BMS uses CAN 2.0B/FD with DBC Layer 2 decoding. CAN arbitration IDs range from 0x98FF0003 to 0x98FF0903.",
+  "type": "object",
+  "required": [
+    "_schema_version",
+    "can",
+    "timing"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version for migration detection. Must match the schema expected version."
+    },
+    "can": {
+      "type": "object",
+      "description": "CAN bus interface and protocol settings.",
+      "required": [
+        "interface",
+        "bitrate",
+        "dbc_path",
+        "base_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "interface": {
+          "type": "string",
+          "description": "CAN network interface name. Use 'can0' for physical hardware or 'vcan0' for virtual CAN during development."
+        },
+        "bitrate": {
+          "type": "integer",
+          "description": "CAN bus bitrate in bits per second. Must match the BMS hardware configuration.",
+          "enum": [
+            250000,
+            500000,
+            1000000
+          ],
+          "x-unit": "bps"
+        },
+        "fd_enabled": {
+          "type": "boolean",
+          "description": "Enable CAN FD (Flexible Data-rate) mode for higher bandwidth messages. Requires CAN FD compatible hardware."
+        },
+        "dbc_path": {
+          "type": "string",
+          "description": "Filesystem path to the DBC file for CAN signal decoding. Relative to the EMS install root."
+        },
+        "base_id": {
+          "type": "integer",
+          "description": "Base CAN arbitration ID for the BMU master (e.g., 0x98FF0003). Slave IDs are computed as base_id + (cluster * 0x100 + rack).",
+          "x-unit": "hex"
+        }
+      }
+    },
+    "timing": {
+      "type": "object",
+      "description": "Message polling intervals and timeout thresholds for BMS CAN communication.",
+      "required": [
+        "fast_cycle_ms",
+        "slow_cycle_ms",
+        "timeout_ms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "fast_cycle_ms": {
+          "type": "integer",
+          "description": "Polling interval for fast CAN messages (voltage, current, SoC). Default 300 ms.",
+          "minimum": 100,
+          "maximum": 1000,
+          "x-unit": "ms"
+        },
+        "slow_cycle_ms": {
+          "type": "integer",
+          "description": "Polling interval for slow CAN messages (temperature, alarms, status). Default 2000 ms.",
+          "minimum": 1000,
+          "maximum": 5000,
+          "x-unit": "ms"
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "description": "BMS communication timeout. If no message received within this window, a communication fault is raised.",
+          "minimum": 1000,
+          "maximum": 30000,
+          "x-unit": "ms"
+        }
+      }
+    },
+    "fault_injection": {
+      "type": "object",
+      "description": "Optional fault injection settings for CAN simulator testing. When present, the CAN simulator applies configured faults to emulate degraded hardware.",
+      "additionalProperties": false,
+      "properties": {
+        "frame_drop_rate": {
+          "type": "number",
+          "description": "Fraction of CAN frames to silently drop. 0.0 = no drops, 1.0 = drop all.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "x-unit": "ratio"
+        },
+        "corrupt_data": {
+          "type": "boolean",
+          "description": "Enable occasional garbled signal values in CAN frames."
+        },
+        "corrupt_rate": {
+          "type": "number",
+          "description": "Corruption probability per frame when corrupt_data is true. Default 0.02 in code.",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "x-unit": "ratio"
+        },
+        "stale_timeout_ms": {
+          "type": "integer",
+          "description": "Stop sending CAN frames for the target rack for this many ms after startup.",
+          "minimum": 0,
+          "x-unit": "ms"
+        },
+        "stale_rack_index": {
+          "type": "integer",
+          "description": "Which rack index goes stale when stale_timeout_ms is set. Default 0.",
+          "minimum": 0,
+          "x-unit": "index"
+        }
+      }
+    },
+    "signal_tuning": {
+      "type": "object",
+      "description": "Optional signal tuning overrides for CAN simulator cell voltage generation. Overrides hardcoded defaults for noise, drift, and base voltage.",
+      "additionalProperties": false,
+      "properties": {
+        "noise_sigma": {
+          "type": "number",
+          "description": "Gaussian noise standard deviation for cell voltage. Default 0.005.",
+          "minimum": 0.0,
+          "x-unit": "V"
+        },
+        "drift_amplitude": {
+          "type": "number",
+          "description": "Sinusoidal drift amplitude in volts. Default 0.15.",
+          "minimum": 0.0,
+          "x-unit": "V"
+        },
+        "drift_period_s": {
+          "type": "number",
+          "description": "Sinusoidal drift period in seconds. Default 60.0.",
+          "exclusiveMinimum": 0.0,
+          "x-unit": "s"
+        },
+        "base_voltage": {
+          "type": "number",
+          "description": "Base cell voltage in volts. Default 3.35.",
+          "minimum": 2.5,
+          "maximum": 4.2,
+          "x-unit": "V"
+        }
+      }
+    }
+  }
+}

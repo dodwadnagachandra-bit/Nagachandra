@@ -1,0 +1,85 @@
+# meter_register_map.yaml -- Synthetic Meter Modbus Register Map
+# Maps to ems_meter_t RTDB struct fields: voltage, current, active_power,
+# reactive_power, frequency, power_factor, energy_import, energy_export.
+#
+# Scale: raw_value = engineering_value * scale.
+# Signed: true = two's complement int16, false = unsigned uint16.
+# Access: r = read-only.
+
+metadata:
+  version: "synthetic-1.0"
+  device_type: meter
+  description: "Grid/load energy meter register map"
+
+registers:
+  - address: 0x0001
+    name: voltage
+    scale: 10
+    unit: V
+    access: r
+    signed: false
+    default: 2300
+    description: "Line voltage RMS. Raw = V * 10."
+
+  - address: 0x0002
+    name: current
+    scale: 100
+    unit: A
+    access: r
+    signed: false
+    default: 0
+    description: "Line current RMS. Raw = A * 100."
+
+  - address: 0x0003
+    name: active_power
+    scale: 10
+    unit: kW
+    access: r
+    signed: true
+    default: 0
+    description: "Active power. Raw = kW * 10. Positive = import."
+
+  - address: 0x0004
+    name: reactive_power
+    scale: 10
+    unit: kVAr
+    access: r
+    signed: true
+    default: 0
+    description: "Reactive power. Raw = kVAr * 10."
+
+  - address: 0x0005
+    name: frequency
+    scale: 100
+    unit: Hz
+    access: r
+    signed: false
+    default: 5000
+    description: "Grid frequency. Raw = Hz * 100."
+
+  - address: 0x0006
+    name: power_factor
+    scale: 1000
+    unit: ""
+    access: r
+    signed: true
+    default: 1000
+    description: "Power factor. Raw = PF * 1000."
+
+  - address: 0x0007
+    name: energy_import
+    scale: 10
+    unit: kWh
+    access: r
+    signed: false
+    default: 0
+    description: "Cumulative energy import. Raw = kWh * 10."
+
+  - address: 0x0008
+    name: energy_export
+    scale: 10
+    unit: kWh
+    access: r
+    signed: false
+    default: 0
+    description: "Cumulative energy export. Raw = kWh * 10."

@@ -57,6 +57,8 @@ class EmsRack(ctypes.Structure):
         ("min_cell_t", ctypes.c_float),
         ("max_cell_t", ctypes.c_float),
         ("avg_cell_t", ctypes.c_float),
+        ("max_cell_num", ctypes.c_float),
+ 	("min_cell_num", ctypes.c_float),
         ("fault_code", ctypes.c_uint32),
         ("online", ctypes.c_uint8),
     ]

@@ -1,0 +1,18 @@
+{
+  "configurations": [
+    {
+      "name": "Linux",
+      "includePath": [
+        "${workspaceFolder}/src/common/c/include/**",
+        "${workspaceFolder}/src/vendor/mpack/**",
+        "${workspaceFolder}/build/**"
+      ],
+      "defines": ["DEBUG"],
+      "cStandard": "c99",
+      "cppStandard": "c++17",
+      "compilerPath": "/usr/bin/gcc",
+      "intelliSenseMode": "linux-gcc-x64"
+    }
+  ],
+  "version": 4
+}

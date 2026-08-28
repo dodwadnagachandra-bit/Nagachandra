@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revx-energy.com/ems/schemas/network_config",
+  "title": "EMS Network Interface Configuration",
+  "description": "Network interface configuration for the ECU-1170-552A. Configures eth0 (WAN/cloud) and eth1 (LAN/device network) with support for DHCP or static IP assignment. If mode is 'static', address, netmask, and gateway are required.",
+  "type": "object",
+  "required": [
+    "_schema_version",
+    "interfaces"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version for migration detection. Must match the schema expected version."
+    },
+    "interfaces": {
+      "type": "object",
+      "description": "Network interface configurations keyed by interface name.",
+      "required": [
+        "eth0",
+        "eth1"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "eth0": {
+          "type": "object",
+          "description": "Primary Ethernet interface (WAN). Typically connected to the site network or cellular router for cloud connectivity.",
+          "required": [
+            "mode"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "description": "IP address assignment mode. 'static' requires manual address configuration; 'dhcp' obtains address automatically from a DHCP server.",
+              "enum": [
+                "static",
+                "dhcp"
+              ]
+            },
+            "address": {
+              "type": "string",
+              "description": "Static IPv4 address for this interface. Required when mode='static'. Example: 192.168.1.100"
+            },
+            "netmask": {
+              "type": "string",
+              "description": "Subnet mask for static IP configuration. Example: 255.255.255.0"
+            },
+            "gateway": {
+              "type": "string",
+              "description": "Default gateway IP address for static IP configuration. Example: 192.168.1.1"
+            },
+            "dns": {
+              "type": "array",
+              "description": "DNS server IP addresses. List of up to 3 DNS servers. Example: [8.8.8.8, 8.8.4.4]",
+              "items": {
+                "type": "string",
+                "description": "DNS server IPv4 address."
+              },
+              "maxItems": 3
+            }
+          },
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "static"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "required": [
+              "address",
+              "netmask",
+              "gateway"
+            ]
+          }
+        },
+        "eth1": {
+          "type": "object",
+          "description": "Secondary Ethernet interface (LAN). Connects to the internal device network: PCS, BTMS, meters, and other Modbus TCP devices.",
+          "required": [
+            "mode"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "description": "IP address assignment mode. 'static' requires manual address configuration; 'dhcp' obtains address automatically.",
+              "enum": [
+                "static",
+                "dhcp"
+              ]
+            },
+            "address": {
+              "type": "string",
+              "description": "Static IPv4 address for this interface. Required when mode='static'. Example: 192.168.2.1"
+            },
+            "netmask": {
+              "type": "string",
+              "description": "Subnet mask for static IP configuration. Example: 255.255.255.0"
+            },
+            "gateway": {
+              "type": "string",
+              "description": "Default gateway for static IP configuration (optional for LAN-only interface)."
+            },
+            "dns": {
+              "type": "array",
+              "description": "DNS server IP addresses for this interface.",
+              "items": {
+                "type": "string",
+                "description": "DNS server IPv4 address."
+              },
+              "maxItems": 3
+            }
+          },
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "static"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          },
+          "then": {
+            "required": [
+              "address",
+              "netmask",
+              "gateway"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

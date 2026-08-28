@@ -1,0 +1,22 @@
+# dg_config.yaml — Diesel Generator Configuration (Container Profile)
+# Schema: config/schemas/dg_config.schema.json
+# Container 6+ MWh class — 1000 kW generator for container power needs
+
+_schema_version: "1.0"
+
+connection:
+  protocol: rtu             # Modbus transport: 'rtu' (RS485) or 'tcp' (Ethernet)
+  slave_id: 4               # Modbus slave ID [1-247]
+  device: /dev/ttyUSB3      # RS485-4 serial port on ECU-1170-552A
+  baud_rate: 9600           # Baud rate [bps]; must match DG controller
+  parity: "N"               # Parity: N=None
+  stopbits: 1               # Stop bits: 1
+
+generator:
+  rated_power_kw: 1000      # Rated generator output [kW]; container backup power
+  fuel_type: diesel         # Fuel type: diesel for container installations
+  auto_start: true          # Auto-start: true for container UPS requirements
+
+timing:
+  poll_interval_ms: 2000    # Poll every 2s [ms]; range: 500-5000ms
+  timeout_ms: 3000          # Request timeout [ms]; range: 500-10000ms

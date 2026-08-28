@@ -1,0 +1,107 @@
+# GPIO Safety I/O Configuration — Residential Profile (50 kWh class)
+# Safety GPIO for ECU-1170-552A: 8 DI (sensor inputs) + 8 DO (actuator outputs)
+# IMPORTANT: Pin assignments must match physical wiring — incorrect config is a safety risk
+# Validates against: config/schemas/gpio_config.schema.json
+
+_schema_version: "1.0"
+
+digital_inputs:
+  DI-0:
+    name: ACDB_FEEDBACK      # AC Distribution Board contactor position feedback
+    description: ACDB main contactor auxiliary contact — high=closed, low=open
+    active_low: false        # High = contactor closed (active high)
+    debounce_ms: 20          # 20ms debounce [ms]; range: 0-100ms
+
+  DI-1:
+    name: FLOOD_SENSOR       # Flood/water ingress detection in battery enclosure
+    description: Water sensor in battery cabinet base — high=water detected
+    active_low: false        # High = water present (active high)
+    debounce_ms: 50          # 50ms debounce for water sensor stability
+
+  DI-2:
+    name: DOOR_SWITCH        # Battery cabinet door open/close detection
+    description: Magnetic reed switch on cabinet door — low=door open
+    active_low: true         # Active-low: GPIO low when door open (NC contact)
+    debounce_ms: 20          # 20ms debounce for mechanical contact
+
+  DI-3:
+    name: SMOKE_DETECTOR     # Smoke/fire detection inside battery cabinet
+    description: Photoelectric smoke detector — high=smoke detected
+    active_low: false        # High = smoke detected (active high)
+    debounce_ms: 0           # No debounce — immediate response required for fire safety
+
+  DI-4:
+    name: HEAT_DETECTOR      # Thermal heat detector for fire detection
+    description: Fixed-temperature heat detector — high=temperature threshold exceeded
+    active_low: false        # High = heat alarm (active high)
+    debounce_ms: 0           # No debounce — immediate response required for fire safety
+
+  DI-5:
+    name: SPARE_DI5          # Spare digital input — available for site-specific sensor
+    description: Spare input — connect to site-specific safety sensor if required
+    active_low: false        # Default polarity (update if sensor requires active-low)
+    debounce_ms: 20          # Default debounce
+
+  DI-6:
+    name: ESTOP_NO           # Emergency Stop Button — Normally Open channel (Channel 1)
+    description: E-Stop dual-channel Channel 1 (NO contact) — high=E-Stop activated
+                 # Dual-channel E-Stop: both DI-6 (NO) and DI-7 (NC) must agree
+    active_low: false        # Active-high: signal goes high when E-Stop button pressed
+    debounce_ms: 5           # 5ms debounce — fast response but rejects EMI noise
+
+  DI-7:
+    name: ESTOP_NC           # Emergency Stop Button — Normally Closed channel (Channel 2)
+    description: E-Stop dual-channel Channel 2 (NC contact) — low=E-Stop activated
+                 # Cross-monitoring: DI-6 high AND DI-7 low confirms valid E-Stop press
+                 # Discrepancy between channels indicates wiring fault
+    active_low: true         # Active-low: signal goes low when E-Stop button pressed
+    debounce_ms: 5           # 5ms debounce matching DI-6 for synchronized monitoring
+
+digital_outputs:
+  DO-0:
+    name: ACDB_TRIP          # AC Distribution Board trip command
+    description: Trips ACDB main contactor to isolate AC grid from BESS
+    active_low: false        # High = trip command asserted
+    initial_state: low       # Start de-energized — contactor closed at boot
+
+  DO-1:
+    name: EXTINGUISHER       # Fire extinguisher discharge relay
+    description: Activates automatic fire suppression system in battery cabinet
+    active_low: false        # High = extinguisher discharge command
+    initial_state: low       # Start safe — do not discharge on boot
+
+  DO-2:
+    name: WARNING_LAMP       # Warning indication lamp
+    description: Amber warning lamp on cabinet — active for warning-level alarms
+    active_low: false        # High = lamp on
+    initial_state: low       # Start off
+
+  DO-3:
+    name: RUNNING_LAMP       # System running indication lamp
+    description: Green running lamp — active when EMS is operational and healthy
+    active_low: false        # High = lamp on
+    initial_state: low       # Start off; lamp turns on when system comes online
+
+  DO-4:
+    name: FAULT_LAMP         # Fault indication lamp
+    description: Red fault lamp on cabinet — active for fault/protection-level conditions
+    active_low: false        # High = lamp on
+    initial_state: low       # Start off
+
+  DO-5:
+    name: PCS_STOP           # PCS emergency stop command
+    description: Hardware stop signal to PCS — trips PCS inverter independent of Modbus
+    active_low: false        # High = stop command asserted to PCS
+    initial_state: low       # Start de-energized — PCS not stopped at boot
+
+  DO-6:
+    name: SIREN              # Audible alarm siren
+    description: Audible alert device — activates for safety events requiring evacuation
+    active_low: false        # High = siren on
+    initial_state: low       # Start silent
+
+  DO-7:
+    name: SPARE_DO7          # Spare digital output — available for site-specific actuator
+    description: Spare output — connect to site-specific actuator if required
+    active_low: false        # Default polarity
+    initial_state: low       # Start de-energized (safe default)

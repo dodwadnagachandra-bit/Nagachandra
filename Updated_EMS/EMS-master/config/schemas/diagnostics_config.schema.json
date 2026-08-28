@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revx-energy.com/ems/schemas/diagnostics_config",
+  "title": "EMS Diagnostics Configuration",
+  "description": "Thresholds, intervals, and enable flags for the diagnostics module. Controls SOH trending, PCS efficiency, thermal analysis, comm health scoring, and predictive alerts.",
+  "type": "object",
+  "required": [
+    "_schema_version",
+    "intervals",
+    "thresholds",
+    "prediction",
+    "battery",
+    "metrics"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version for migration detection. Must match the expected schema version."
+    },
+    "intervals": {
+      "type": "object",
+      "description": "Timing intervals controlling how frequently the diagnostics module publishes results and recomputes trend metrics.",
+      "required": ["publish_s", "trend_update_s"],
+      "additionalProperties": false,
+      "properties": {
+        "publish_s": {
+          "type": "integer",
+          "description": "Interval in seconds between ZMQ PUB publications of current diagnostic results. Lower values increase CPU and network load.",
+          "minimum": 1,
+          "maximum": 3600,
+          "x-unit": "s"
+        },
+        "trend_update_s": {
+          "type": "integer",
+          "description": "Interval in seconds between DuckDB historical trend recalculations. Trend queries are sub-second but update infrequently to avoid redundant work.",
+          "minimum": 60,
+          "maximum": 86400,
+          "x-unit": "s"
+        }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "description": "Threshold values that trigger diagnostic warnings or critical alerts. Adjust per site to match battery type and operational requirements.",
+      "required": [
+        "soh_warning_pct",
+        "soh_critical_pct",
+        "pcs_efficiency_warning_pct",
+        "thermal_delta_warning_c",
+        "comm_fault_warning_rate"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "soh_warning_pct": {
+          "type": "number",
+          "description": "State-of-health percentage below which a SOH warning alert is raised. Typical LFP field threshold: 85%.",
+          "minimum": 0.0,
+          "maximum": 100.0,
+          "x-unit": "%",
+          "x-mutable": true
+        },
+        "soh_critical_pct": {
+          "type": "number",
+          "description": "State-of-health percentage below which a critical alert is raised and predictive maintenance is recommended. Typical: 80%.",
+          "minimum": 0.0,
+          "maximum": 100.0,
+          "x-unit": "%",
+          "x-mutable": true
+        },
+        "pcs_efficiency_warning_pct": {
+          "type": "number",
+          "description": "PCS round-trip efficiency percentage below which a warning is raised. Values below 90% suggest inverter degradation.",
+          "minimum": 0.0,
+          "maximum": 100.0,
+          "x-unit": "%",
+          "x-mutable": true
+        },
+        "thermal_delta_warning_c": {
+          "type": "number",
+          "description": "Temperature delta (cell max minus ambient) in degrees Celsius above which a thermal warning is raised. Excessive delta indicates cooling degradation.",
+          "minimum": 0.0,
+          "maximum": 50.0,
+          "x-unit": "\u00b0C",
+          "x-mutable": true
+        },
+        "comm_fault_warning_rate": {
+          "type": "integer",
+          "description": "Number of communication faults per hour above which a comm health warning is raised. Faults include CAN timeouts, Modbus CRC errors, and missed polls.",
+          "minimum": 0,
+          "maximum": 3600,
+          "x-unit": "faults/hr",
+          "x-mutable": true
+        }
+      }
+    },
+    "prediction": {
+      "type": "object",
+      "description": "Parameters controlling the linear regression predictive alert algorithm. Predictions require a minimum history window to be statistically meaningful.",
+      "required": ["min_history_days", "history_window_days"],
+      "additionalProperties": false,
+      "properties": {
+        "min_history_days": {
+          "type": "integer",
+          "description": "Minimum days of SOH data that must exist before any prediction is computed. Prevents noise-driven predictions on new installations.",
+          "minimum": 1,
+          "maximum": 365,
+          "x-unit": "days"
+        },
+        "history_window_days": {
+          "type": "integer",
+          "description": "Number of days of historical SOH data used as input to the linear regression slope. Longer windows are more stable; shorter windows detect recent degradation changes faster.",
+          "minimum": 1,
+          "maximum": 365,
+          "x-unit": "days"
+        }
+      }
+    },
+    "battery": {
+      "type": "object",
+      "description": "Battery physical parameters for the installed system. Must be set per-installation to match the actual hardware.",
+      "required": ["rated_capacity_ah"],
+      "additionalProperties": false,
+      "properties": {
+        "rated_capacity_ah": {
+          "type": "number",
+          "description": "Nominal cell (or rack) capacity in ampere-hours at rated conditions. Used as the denominator in coulomb-counting SOH estimation.",
+          "minimum": 1.0,
+          "x-unit": "Ah"
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Enable or disable individual diagnostic categories. Disable categories where hardware is not present (e.g. thermal_enabled: false on sites without BTMS).",
+      "required": [
+        "soh_enabled",
+        "pcs_efficiency_enabled",
+        "thermal_enabled",
+        "comm_health_enabled",
+        "predictions_enabled"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "soh_enabled": {
+          "type": "boolean",
+          "description": "Enable SOH estimation using coulomb counting. Requires BMS rack telemetry (pack_i, pack_soc).",
+          "x-mutable": true
+        },
+        "pcs_efficiency_enabled": {
+          "type": "boolean",
+          "description": "Enable PCS efficiency calculation. Requires PCS telemetry (ac_power, dc_power).",
+          "x-mutable": true
+        },
+        "thermal_enabled": {
+          "type": "boolean",
+          "description": "Enable thermal delta analysis. Requires BTMS telemetry (outlet_temp) and BMS cell temperatures.",
+          "x-mutable": true
+        },
+        "comm_health_enabled": {
+          "type": "boolean",
+          "description": "Enable communication fault rate tracking. Requires alarm_pub comm_fault events.",
+          "x-mutable": true
+        },
+        "predictions_enabled": {
+          "type": "boolean",
+          "description": "Enable predictive alerts using linear regression on historical SOH trends. Requires min_history_days of data.",
+          "x-mutable": true
+        }
+      }
+    }
+  }
+}

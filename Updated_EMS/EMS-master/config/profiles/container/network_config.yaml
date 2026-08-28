@@ -1,0 +1,23 @@
+# network_config.yaml — Network Configuration (Container Profile)
+# Schema: config/schemas/network_config.schema.json
+# Container 6+ MWh class — redundant static addressing for both interfaces
+
+_schema_version: "1.0"
+
+interfaces:
+  eth0:
+    mode: static              # Static IP for reliable grid operator connectivity
+    address: 10.0.0.10        # Static IPv4 on WAN/grid operator network
+    netmask: 255.255.255.0    # Subnet mask — /24
+    gateway: 10.0.0.1         # Default gateway
+    dns:
+      - 10.0.0.1              # Primary DNS (site DNS server)
+      - 8.8.8.8               # Secondary DNS (Google fallback)
+
+  eth1:
+    mode: static              # Static IP for internal device network
+    address: 192.168.100.1    # Device LAN subnet gateway address
+    netmask: 255.255.255.0    # Subnet mask — /24
+    gateway: 192.168.100.254  # Upstream switch
+    dns:
+      - 192.168.100.254       # Internal DNS for device LAN

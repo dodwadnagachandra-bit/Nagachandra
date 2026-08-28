@@ -1,0 +1,40 @@
+# system_config.yaml — EMS System Configuration (Commercial Profile)
+# Schema: config/schemas/system_config.schema.json
+# Medium scale: 2 clusters, 8 racks/cluster, 12 modules/rack, 32 cells, 16 temps (~500 kWh class)
+
+_schema_version: "1.0"
+
+system:
+  # Unique site identifier used in telemetry, MQTT topics, and cloud data.
+  site_id: "COM-001"
+
+  # Human-readable name for this site. Displayed in the HMI and dashboards.
+  site_name: "Commercial Demo"
+
+  # EMS firmware version in semver format.
+  firmware_version: "0.1.0"
+
+  # Deployment scale tier: residential | commercial | container
+  model: "commercial"
+
+topology:
+  # Number of independent battery clusters [count]; range: 1-8
+  cluster_count: 2           # Commercial: 2 clusters for ~500 kWh class
+
+  # Number of BMU rack slave units per cluster [count]; range: 1-16
+  racks_per_cluster: 8       # 8 racks × 2 clusters = 16 racks total
+
+  # Number of LMU battery modules per rack [count]; range: 3-20
+  modules_per_rack: 12       # 12 modules per rack
+
+  # Number of series-connected cells per battery module [count]; range: 16-108
+  cells_per_module: 32       # 32 cells/module for commercial cell pack
+
+  # Number of NTC temperature sensors per battery module [count]; range: 4-40
+  temps_per_module: 16       # 16 temperature sensors per module
+
+subsystems:
+  has_dg: true
+  has_pv: true
+  has_btms: true
+  has_meter: true

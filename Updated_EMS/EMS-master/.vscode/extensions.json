@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "ms-vscode.cpptools",
+    "ms-vscode.cmake-tools",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "charliermarsh.ruff",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "redhat.vscode-yaml",
+    "ms-vscode.makefile-tools",
+    "anthropic.claude-code"
+  ]
+}

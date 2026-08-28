@@ -1,0 +1,52 @@
+[Unit]
+Description=EMS Safety Manager -- L1 Safety layer (RT GPIO, hardware watchdog)
+Documentation=https://github.com/ReVx-Energy/EMS
+# RTDB must exist before we can write GPIO state to it
+After=ems-data-manager.service
+# Do NOT use Requires= -- safety_manager must start even if data_manager is down (SAFE-10)
+Wants=ems-data-manager.service
+PartOf=ems.target
+
+[Service]
+Type=simple
+ExecStart=/opt/ems/bin/safety_manager
+# Restart=always (not on-failure) -- safety must ALWAYS restart (SAFE-10)
+Restart=always
+RestartSec=1
+# Short restart delay -- safety is critical
+User=ems
+Group=ems
+WorkingDirectory=/opt/ems
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ems-safety-manager
+
+# Real-time scheduling capabilities (SAFE-06)
+AmbientCapabilities=CAP_SYS_NICE CAP_SYS_RAWIO
+LimitRTPRIO=99
+LimitMEMLOCK=infinity
+
+# Watchdog integration -- systemd monitors us too
+# Note: safety_manager manages /dev/watchdog directly, this is for systemd-level monitoring
+# WatchdogSec=5
+
+# Security hardening — production (PROD-06)
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=no
+# NoNewPrivileges must be no for AmbientCapabilities to work
+ReadWritePaths=/data /run/ems /dev/shm
+RuntimeDirectory=ems
+# Access to GPIO device and watchdog
+DeviceAllow=/dev/gpiochip0 rw
+DeviceAllow=/dev/gpiochip1 rw
+DeviceAllow=/dev/watchdog rw
+CapabilityBoundingSet=CAP_SYS_NICE CAP_SYS_RAWIO
+SystemCallFilter=@system-service @io-event
+MemoryMax=64M
+MemoryHigh=48M
+# Do NOT add CPUQuota -- safety_manager must not be CPU-starved
+
+[Install]
+WantedBy=ems.target

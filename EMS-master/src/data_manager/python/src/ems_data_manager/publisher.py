@@ -89,6 +89,8 @@ def _rack_to_dict(rack: EmsRack) -> dict[str, Any]:
         "min_cell_t": rack.min_cell_t,
         "max_cell_t": rack.max_cell_t,
         "avg_cell_t": rack.avg_cell_t,
+	"max_cell_num": rack.max_cell_num,
+	"min_cell_num": rack.min_cell_num,
         "fault_code": rack.fault_code,
         "online": rack.online,
     }

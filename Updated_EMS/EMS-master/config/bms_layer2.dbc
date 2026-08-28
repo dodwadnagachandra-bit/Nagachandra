@@ -1,0 +1,131 @@
+// =============================================================================
+// Synthetic DBC — BMU Layer 2 Protocol (Development/Simulation)
+// =============================================================================
+//
+// This is a synthetic DBC file for development and simulation purposes.
+// It defines 10 message types for one BMU (Battery Management Unit) rack.
+//
+// CAN ID Scheme (runtime):
+//   actual_can_id = base_id + cluster * 0x1000 + rack * 0x10 + msg_offset
+//
+// The DBC IDs below are templates for cluster 0, rack 0 only.
+// At runtime, the simulator and comm_manager compute per-rack CAN IDs
+// using the formula above.
+//
+// Example (base_id = 0x18FF0003):
+//   Rack 0:  0x18FF0003 + 0x00..0x09
+//   Rack 1:  0x18FF0003 + 0x10..0x19
+//   Rack 2:  0x18FF0003 + 0x20..0x29
+//   Cluster 1 Rack 0: 0x18FF0003 + 0x1000..0x1009
+//
+// All signals use little-endian (Intel) byte order.
+// Replace with vendor DBC when BMS hardware is available.
+//
+// =============================================================================
+
+VERSION ""
+
+NS_ :
+
+BS_:
+
+BU_: BMU EMS
+
+// ---------------------------------------------------------------------------
+// Message 0x00: Pack Summary (fast cycle, 300ms)
+// Pack-level voltage, current, SOC, SOH, and fault bitmap.
+// ---------------------------------------------------------------------------
+BO_ 2566848515 PackSummary: 8 BMU
+ SG_ pack_v : 0|16@1+ (0.1,0) [0|1000] "V" EMS
+ SG_ pack_i : 16|16@1- (0.1,0) [-3000|3000] "A" EMS
+ SG_ pack_soc : 32|8@1+ (0.5,0) [0|100] "%" EMS
+ SG_ pack_soh : 40|8@1+ (0.5,0) [0|100] "%" EMS
+ SG_ fault_code : 48|16@1+ (1,0) [0|65535] "" EMS
+
+// ---------------------------------------------------------------------------
+// Messages 0x01-0x07: Cell Voltage Groups (fast cycle, 300ms)
+// 4 cells per message, 16-bit unsigned, 0.001V resolution.
+// Groups 1-7 cover up to 28 cells per rack.
+// ---------------------------------------------------------------------------
+BO_ 2566848516 CellVoltage_01: 8 BMU
+ SG_ cell_v_01 : 0|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_02 : 16|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_03 : 32|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_04 : 48|16@1+ (0.001,0) [0|5] "V" EMS
+
+BO_ 2566848517 CellVoltage_02: 8 BMU
+ SG_ cell_v_05 : 0|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_06 : 16|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_07 : 32|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_08 : 48|16@1+ (0.001,0) [0|5] "V" EMS
+
+BO_ 2566848518 CellVoltage_03: 8 BMU
+ SG_ cell_v_09 : 0|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_10 : 16|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_11 : 32|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_12 : 48|16@1+ (0.001,0) [0|5] "V" EMS
+
+BO_ 2566848519 CellVoltage_04: 8 BMU
+ SG_ cell_v_13 : 0|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_14 : 16|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_15 : 32|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_16 : 48|16@1+ (0.001,0) [0|5] "V" EMS
+
+BO_ 2566848520 CellVoltage_05: 8 BMU
+ SG_ cell_v_17 : 0|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_18 : 16|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_19 : 32|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_20 : 48|16@1+ (0.001,0) [0|5] "V" EMS
+
+BO_ 2566848521 CellVoltage_06: 8 BMU
+ SG_ cell_v_21 : 0|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_22 : 16|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_23 : 32|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_24 : 48|16@1+ (0.001,0) [0|5] "V" EMS
+
+BO_ 2566848522 CellVoltage_07: 8 BMU
+ SG_ cell_v_25 : 0|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_26 : 16|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_27 : 32|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ cell_v_28 : 48|16@1+ (0.001,0) [0|5] "V" EMS
+
+// ---------------------------------------------------------------------------
+// Message 0x08: Cell Temperature (slow cycle, 2000ms)
+// 8 temperatures per frame, 8-bit unsigned, offset -40 degC.
+// Raw 0 = -40 degC, raw 72 = 32 degC (typical operating).
+// ---------------------------------------------------------------------------
+BO_ 2566848523 CellTemperature: 8 BMU
+ SG_ cell_t_01 : 0|8@1+ (1,-40) [-40|215] "degC" EMS
+ SG_ cell_t_02 : 8|8@1+ (1,-40) [-40|215] "degC" EMS
+ SG_ cell_t_03 : 16|8@1+ (1,-40) [-40|215] "degC" EMS
+ SG_ cell_t_04 : 24|8@1+ (1,-40) [-40|215] "degC" EMS
+ SG_ cell_t_05 : 32|8@1+ (1,-40) [-40|215] "degC" EMS
+ SG_ cell_t_06 : 40|8@1+ (1,-40) [-40|215] "degC" EMS
+ SG_ cell_t_07 : 48|8@1+ (1,-40) [-40|215] "degC" EMS
+ SG_ cell_t_08 : 56|8@1+ (1,-40) [-40|215] "degC" EMS
+
+// ---------------------------------------------------------------------------
+// Message 0x09: Rack Status (slow cycle, 2000ms)
+// Online flag, balancing count, min/max/avg cell voltage.
+// ---------------------------------------------------------------------------
+BO_ 2566848524 RackStatus: 8 BMU
+ SG_ online : 0|8@1+ (1,0) [0|1] "" EMS
+ SG_ balancing_count : 8|8@1+ (1,0) [0|255] "" EMS
+ SG_ min_cell_v : 16|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ max_cell_v : 32|16@1+ (0.001,0) [0|5] "V" EMS
+ SG_ avg_cell_v : 48|16@1+ (0.001,0) [0|5] "V" EMS
+
+// ---------------------------------------------------------------------------
+// Message Comments
+// ---------------------------------------------------------------------------
+CM_ BO_ 2566848515 "Pack-level summary: voltage, current, SOC, SOH, faults. Sent at fast cycle (300ms).";
+CM_ BO_ 2566848516 "Cell voltages group 1 (cells 1-4). Sent at fast cycle (300ms).";
+CM_ BO_ 2566848517 "Cell voltages group 2 (cells 5-8). Sent at fast cycle (300ms).";
+CM_ BO_ 2566848518 "Cell voltages group 3 (cells 9-12). Sent at fast cycle (300ms).";
+CM_ BO_ 2566848519 "Cell voltages group 4 (cells 13-16). Sent at fast cycle (300ms).";
+CM_ BO_ 2566848520 "Cell voltages group 5 (cells 17-20). Sent at fast cycle (300ms).";
+CM_ BO_ 2566848521 "Cell voltages group 6 (cells 21-24). Sent at fast cycle (300ms).";
+CM_ BO_ 2566848522 "Cell voltages group 7 (cells 25-28). Sent at fast cycle (300ms).";
+CM_ BO_ 2566848523 "Cell temperatures (8 sensors). Offset -40 degC. Sent at slow cycle (2000ms).";
+CM_ BO_ 2566848524 "Rack status: online flag, balancing count, min/max/avg cell voltage. Sent at slow cycle (2000ms).";
+

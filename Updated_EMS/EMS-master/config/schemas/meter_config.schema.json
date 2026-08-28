@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revx-energy.com/ems/schemas/meter_config",
+  "title": "EMS Energy Meter Communication Configuration",
+  "description": "Modbus connection and device configuration for the energy meter. Supports both Modbus RTU (RS485) and Modbus TCP. Measures AC power import/export, voltage, current, and energy totals.",
+  "type": "object",
+  "required": [
+    "_schema_version",
+    "connection",
+    "device",
+    "timing"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version for migration detection. Must match the schema expected version."
+    },
+    "connection": {
+      "type": "object",
+      "description": "Modbus transport layer configuration. Protocol selects RTU (RS485 serial) or TCP (Ethernet).",
+      "required": [
+        "protocol",
+        "slave_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "description": "Modbus transport protocol. 'rtu' uses RS485 serial, 'tcp' uses Ethernet.",
+          "enum": [
+            "rtu",
+            "tcp"
+          ]
+        },
+        "slave_id": {
+          "type": "integer",
+          "description": "Modbus slave/unit ID of the energy meter device.",
+          "minimum": 1,
+          "maximum": 247,
+          "x-unit": "id"
+        },
+        "device": {
+          "type": "string",
+          "description": "Serial device path for Modbus RTU. Example: /dev/ttyUSB2 or /dev/ttyS3."
+        },
+        "baud_rate": {
+          "type": "integer",
+          "description": "Serial baud rate for Modbus RTU. Must match meter hardware configuration. Default: 9600.",
+          "enum": [
+            9600,
+            19200,
+            38400,
+            115200
+          ],
+          "x-unit": "bps"
+        },
+        "parity": {
+          "type": "string",
+          "description": "Serial parity for Modbus RTU. N=None, E=Even, O=Odd. Default: N.",
+          "enum": [
+            "N",
+            "E",
+            "O"
+          ]
+        },
+        "stopbits": {
+          "type": "integer",
+          "description": "Number of serial stop bits for Modbus RTU. Default: 1.",
+          "enum": [
+            1,
+            2
+          ],
+          "x-unit": "bits"
+        },
+        "host": {
+          "type": "string",
+          "description": "IP address or hostname of the energy meter for Modbus TCP."
+        },
+        "port": {
+          "type": "integer",
+          "description": "TCP port number for Modbus TCP. Standard Modbus TCP port is 502.",
+          "minimum": 1,
+          "maximum": 65535,
+          "x-unit": "port"
+        }
+      },
+      "if": {
+        "properties": {
+          "protocol": {
+            "const": "rtu"
+          }
+        },
+        "required": [
+          "protocol"
+        ]
+      },
+      "then": {
+        "required": [
+          "device",
+          "baud_rate",
+          "parity"
+        ]
+      },
+      "else": {
+        "required": [
+          "host",
+          "port"
+        ]
+      }
+    },
+    "device": {
+      "type": "object",
+      "description": "Meter device parameters. Defines the meter model for correct register mapping and CT ratio for current scaling.",
+      "required": [
+        "model",
+        "ct_ratio"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "model": {
+          "type": "string",
+          "description": "Energy meter model identifier. Selects the correct register map and scaling factors for the specific meter hardware.",
+          "enum": [
+            "acrel",
+            "schneider",
+            "abb",
+            "generic"
+          ]
+        },
+        "ct_ratio": {
+          "type": "number",
+          "description": "Current transformer ratio used with the meter. Example: 200 means 200:1 CT (200A primary to 1A secondary). Used to scale current readings to actual amperes.",
+          "minimum": 1,
+          "x-unit": "ratio"
+        }
+      }
+    },
+    "timing": {
+      "type": "object",
+      "description": "Modbus polling interval and timeout configuration for meter communication.",
+      "required": [
+        "poll_interval_ms",
+        "timeout_ms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "poll_interval_ms": {
+          "type": "integer",
+          "description": "How often to poll meter registers for power and energy readings. 1Hz (1000ms) is typical for energy accounting.",
+          "minimum": 500,
+          "maximum": 5000,
+          "x-unit": "ms"
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "description": "Modbus request timeout. If no response within this window, the request is retried or a fault is raised.",
+          "minimum": 500,
+          "maximum": 10000,
+          "x-unit": "ms"
+        }
+      }
+    }
+  }
+}

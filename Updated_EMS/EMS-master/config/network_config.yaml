@@ -1,0 +1,19 @@
+# Network Configuration — Residential Profile (50 kWh class)
+# ECU-1170-552A network interface configuration
+# Validates against: config/schemas/network_config.schema.json
+
+_schema_version: "1.0"
+
+interfaces:
+  eth0:
+    mode: dhcp               # IP assignment: 'static' or 'dhcp'
+                             # Residential: DHCP from home router for cloud connectivity
+                             # Note: when mode=static, address/netmask/gateway are required
+
+  eth1:
+    mode: static             # IP assignment: 'static' for device LAN (consistent addressing)
+    address: 192.168.1.100   # Static IPv4 address on device LAN
+    netmask: 255.255.255.0   # Subnet mask — /24 (254 hosts)
+    gateway: 192.168.1.1     # Default gateway for LAN (router/switch)
+    dns:
+      - 8.8.8.8              # Primary DNS: Google Public DNS

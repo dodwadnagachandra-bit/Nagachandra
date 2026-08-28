@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://revx-energy.com/ems/schemas/dg_config",
+  "title": "EMS Diesel Generator Communication Configuration",
+  "description": "Modbus connection and generator parameters for the Diesel Generator (DG). Supports both Modbus RTU (RS485) and Modbus TCP. Monitors generator status and controls auto-start for backup power during grid outages.",
+  "type": "object",
+  "required": [
+    "_schema_version",
+    "connection",
+    "generator",
+    "timing"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "_schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version for migration detection. Must match the schema expected version."
+    },
+    "connection": {
+      "type": "object",
+      "description": "Modbus transport layer configuration. Protocol selects RTU (RS485 serial) or TCP (Ethernet).",
+      "required": [
+        "protocol",
+        "slave_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "description": "Modbus transport protocol. 'rtu' uses RS485 serial, 'tcp' uses Ethernet.",
+          "enum": [
+            "rtu",
+            "tcp"
+          ]
+        },
+        "slave_id": {
+          "type": "integer",
+          "description": "Modbus slave/unit ID of the generator controller.",
+          "minimum": 1,
+          "maximum": 247,
+          "x-unit": "id"
+        },
+        "device": {
+          "type": "string",
+          "description": "Serial device path for Modbus RTU. Example: /dev/ttyUSB3 or /dev/ttyS4."
+        },
+        "baud_rate": {
+          "type": "integer",
+          "description": "Serial baud rate for Modbus RTU. Must match generator controller configuration. Default: 9600.",
+          "enum": [
+            9600,
+            19200,
+            38400,
+            115200
+          ],
+          "x-unit": "bps"
+        },
+        "parity": {
+          "type": "string",
+          "description": "Serial parity for Modbus RTU. N=None, E=Even, O=Odd. Default: N.",
+          "enum": [
+            "N",
+            "E",
+            "O"
+          ]
+        },
+        "stopbits": {
+          "type": "integer",
+          "description": "Number of serial stop bits for Modbus RTU. Default: 1.",
+          "enum": [
+            1,
+            2
+          ],
+          "x-unit": "bits"
+        },
+        "host": {
+          "type": "string",
+          "description": "IP address or hostname of the generator controller for Modbus TCP."
+        },
+        "port": {
+          "type": "integer",
+          "description": "TCP port number for Modbus TCP. Standard Modbus TCP port is 502.",
+          "minimum": 1,
+          "maximum": 65535,
+          "x-unit": "port"
+        }
+      },
+      "if": {
+        "properties": {
+          "protocol": {
+            "const": "rtu"
+          }
+        },
+        "required": [
+          "protocol"
+        ]
+      },
+      "then": {
+        "required": [
+          "device",
+          "baud_rate",
+          "parity"
+        ]
+      },
+      "else": {
+        "required": [
+          "host",
+          "port"
+        ]
+      }
+    },
+    "generator": {
+      "type": "object",
+      "description": "Generator hardware parameters. Defines rated capacity, fuel type, and auto-start behavior.",
+      "required": [
+        "rated_power_kw",
+        "fuel_type",
+        "auto_start"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "rated_power_kw": {
+          "type": "number",
+          "description": "Nominal rated output power of the generator. Used by control_manager to plan load dispatch. Must match nameplate rating.",
+          "minimum": 1,
+          "x-unit": "kW"
+        },
+        "fuel_type": {
+          "type": "string",
+          "description": "Generator fuel type. Affects fuel consumption logging and maintenance scheduling.",
+          "enum": [
+            "diesel",
+            "gas"
+          ]
+        },
+        "auto_start": {
+          "type": "boolean",
+          "description": "Enable automatic generator start when grid fails and BESS SOC is below threshold. Set false for sites requiring manual generator operation."
+        }
+      }
+    },
+    "timing": {
+      "type": "object",
+      "description": "Modbus polling interval and timeout configuration for generator communication.",
+      "required": [
+        "poll_interval_ms",
+        "timeout_ms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "poll_interval_ms": {
+          "type": "integer",
+          "description": "How often to poll generator registers for status and power output readings.",
+          "minimum": 500,
+          "maximum": 5000,
+          "x-unit": "ms"
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "description": "Modbus request timeout. If no response within this window, the request is retried or a fault is raised.",
+          "minimum": 500,
+          "maximum": 10000,
+          "x-unit": "ms"
+        }
+      }
+    }
+  }
+}

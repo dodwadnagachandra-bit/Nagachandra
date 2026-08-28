@@ -1,0 +1,108 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: CAN Simulator",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.simulators.can_sim",
+      "args": ["--interface", "vcan0", "--verbose"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: Modbus Simulator",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.simulators.modbus_sim",
+      "args": ["--transport", "tcp", "--tcp-port", "5020", "--verbose"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: GPIO Harness",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "tools.simulators.gpio_harness",
+      "args": ["daemon", "--backend", "rtdb"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: Validate Config",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/tools/validate_config.py",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Pytest: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["${file}", "-v", "-s"],
+      "python": "${workspaceFolder}/.venv/bin/python",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "C: safety_manager (GDB)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/src/safety_manager/safety_manager",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "Build C (Debug)"
+    },
+    {
+      "name": "C: Attach to Process",
+      "type": "cppdbg",
+      "request": "attach",
+      "program": "${workspaceFolder}/build/src/safety_manager/safety_manager",
+      "processId": "${command:pickProcess}",
+      "MIMode": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Sim Stack + HMI",
+      "configurations": [
+        "Python: CAN Simulator",
+        "Python: Modbus Simulator",
+        "Python: GPIO Harness"
+      ],
+      "stopAll": true
+    }
+  ]
+}
