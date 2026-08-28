@@ -16,6 +16,7 @@ void can_decoder(uint32_t can_id, const uint8_t data[8], ems_rack_t *rack)
     {
         case first_msg:
         {
+
             // uint16_t raw_voltage = (data[0] << 8) | data[1];
             // float voltage = raw_voltage * 0.001f;
             // rack->pack_v = voltage;
@@ -23,6 +24,14 @@ void can_decoder(uint32_t can_id, const uint8_t data[8], ems_rack_t *rack)
             // uint16_t raw_current = (data[2] << 8) | data[3];
             // float current = raw_current * 1;
             // rack->pack_i = current;
+            uint16_t raw_voltage = (data[0] << 8) | data[1];
+            float voltage = raw_voltage * 0.001f;
+            rack->pack_v = voltage;
+
+            uint16_t raw_current = (data[2] << 8) | data[3];
+            float current = raw_current * 1;
+            rack->pack_i = current;
+
 
             uint16_t raw_soc = (data[4] << 8) | data[5];
             float soc = raw_soc * 1;
@@ -58,6 +67,7 @@ void can_decoder(uint32_t can_id, const uint8_t data[8], ems_rack_t *rack)
             float Vavg = (Vmax + Vmin) / 2;
             rack->avg_cell_v = Vavg;
 
+<<<<<<< HEAD
             uint16_t raw_Vmax_num = data[4];
 	    float  Vmax_num = raw_Vmax_num * 1;
 	    rack->max_cell_num = Vmax_num;
@@ -67,6 +77,8 @@ void can_decoder(uint32_t can_id, const uint8_t data[8], ems_rack_t *rack)
             float  Vmin_num = raw_Vmin_num * 1;
             rack->min_cell_num = Vmin_num;
 
+=======
+>>>>>>> 5b3ef3c2fbd9e4fc639fdeae09c66453aae3e296
             break;
         }
 
@@ -86,6 +98,7 @@ void can_decoder(uint32_t can_id, const uint8_t data[8], ems_rack_t *rack)
 
             break;
         }
+<<<<<<< HEAD
 
 
         case 0x306U:
@@ -99,6 +112,8 @@ void can_decoder(uint32_t can_id, const uint8_t data[8], ems_rack_t *rack)
             rack->pack_i = current;
 
         }
+=======
+>>>>>>> 5b3ef3c2fbd9e4fc639fdeae09c66453aae3e296
     }
 }
 
