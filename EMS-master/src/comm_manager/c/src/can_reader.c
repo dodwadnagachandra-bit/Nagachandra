@@ -175,39 +175,24 @@ void *can_reader_thread(void *arg)
             continue;
         }
 
-        /* --- Data frame handling --- */
-        uint32_t masked_id = frame.can_id & CAN_EFF_MASK;
-
+        
         int cluster = 0;
         int rack = 0;
-        int msg_offset = 0;
-        can_decode_id(frame.can_id, cfg->base_can_id,
-                      &cluster, &rack, &msg_offset);
-
-        /* Bounds-check cluster and rack against topology */
-        if (cluster != cfg->cluster_index)
-        {
-            /* Frame from unexpected cluster -- skip */
-            (void)masked_id;
-            continue;
-        }
-        if (rack < 0 || rack >= cfg->racks_per_cluster)
-        {
-            continue;  /* Out-of-range rack index */
-        }
-        if (msg_offset < 0 || msg_offset >= CAN_MSG_COUNT)
-        {
-            continue;  /* Unknown message offset */
-        }
-
         ems_rack_t *r = &cfg->rtdb->clusters[cluster].racks[rack];
 
         /* Decode frame and write to RTDB via seqlock */
         ems_seqlock_write_begin(&r->lock);
-        can_decode_frame(msg_offset, frame.data, r);
+        can_decoder(frame.can_id, frame.data, r);
         r->last_update_ms = clock_mono_ms();
         r->online = 1;
         ems_seqlock_write_end(&r->lock);
+
+        fprintf(stderr,
+                "[decode] id=0x%X v=%.2f i=%.2f soc=%.2f soh=%.2f "
+                "minV=%.2f maxV=%.2f avgV=%.2f minT=%.2f maxT=%.2f avgT=%.2f\n",
+                frame.can_id, r->pack_v, r->pack_i, r->pack_soc, r->pack_soh,
+                r->min_cell_v, r->max_cell_v, r->avg_cell_v,
+                r->min_cell_t, r->max_cell_t, r->avg_cell_t);
     }
 
     close(fd);

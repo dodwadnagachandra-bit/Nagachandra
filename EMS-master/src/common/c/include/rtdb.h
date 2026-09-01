@@ -69,8 +69,75 @@ typedef struct
     float    max_cell_t;      /* degC — maximum cell temperature in rack */
     float    avg_cell_t;      /* degC — average cell temperature in rack */
 
+    float    max_cell_num;    /*      - indicates cell number with maximum voltage */
+    float    min_cell_num;    /*      - indicates cell number with minimum voltage */
+    float    full_cap_rem;    /* mAh  - Full capacity (Remaining)         */
+    float    Delta_t;         /* degC - Difference between the temperature */
+    float  	  Delta_v;         /* V    - Difference between the  voltages  */
+
+    float    Tmax_id;         /*      - indicates cell number with maximum Temp */
+    float    Tmin_id;         /*      - indicates cell number with minimum Temp */
+    float    cycle_cnt;       /*      - indicates cycle count            */
+
+    float V_0;
+	float V_1;
+	float V_2;
+	float V_3;
+	float V_4;
+	float V_5;
+	float V_6;
+	float V_7;
+	float V_8;
+	float V_9;
+	float V_10;
+	float V_11;
+	float V_12;
+	float V_13;
+	float V_14;
+	float V_15;
+	float V_16;
+	float V_17;
+	float V_18;
+	float V_19;
+	float V_20;
+	float V_21;
+	float V_22;
+	float V_23;
+	float V_24;
+	float V_25;
+	float V_26;
+	float V_27;
+	float V_28;
+	float V_29;
+	float V_30;
+	float V_31;
+	float V_32;
+	float V_33;
+	float V_34;
+	float V_35;
+	float V_36;
+	float V_37;
+	float V_38;
+	float V_39;
+	float V_40;
+	float V_41;
+	float V_42;
+	float V_43;
+	float V_44;
+	float V_45;
+	float V_46;
+	float V_47;
+	float V_48;
+	float V_49;
+	float V_50;
+	float V_51;
+	float V_52;
+	float V_53;
+	float V_54;
+
     uint32_t fault_code;      /* BMS fault bitmap                        */
     uint8_t  online;          /* 0=offline, 1=online (comm status)       */
+
 } ems_rack_t;
 
 /** Battery cluster — group of racks on one CAN bus. */

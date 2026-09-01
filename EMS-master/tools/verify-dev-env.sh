@@ -192,7 +192,7 @@ fi
 if modprobe -n vcan >/dev/null 2>&1; then
     pass "vcan kernel module available"
 else
-    fail "vcan kernel module not available — may need PREEMPT_RT kernel or module install"
+     warn "vcan kernel module not available — virtual CAN simulations will not work"
 fi
 
 # 13. gpio-sim kernel module (virtual GPIO for safety GPIO simulator)

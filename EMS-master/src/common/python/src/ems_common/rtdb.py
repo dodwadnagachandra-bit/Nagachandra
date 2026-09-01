@@ -57,8 +57,42 @@ class EmsRack(ctypes.Structure):
         ("min_cell_t", ctypes.c_float),
         ("max_cell_t", ctypes.c_float),
         ("avg_cell_t", ctypes.c_float),
+        ("max_cell_num", ctypes.c_float),
+ 	("min_cell_num", ctypes.c_float),
+	("full_cap_rem", ctypes.c_float),
+	("Delta_t", ctypes.c_float),
+	("Delta_v", ctypes.c_float),
+	("cycle_cnt", ctypes.c_float),
+
+    	("Tmax_id", ctypes.c_float),
+        ("Tmin_id", ctypes.c_float),
         ("fault_code", ctypes.c_uint32),
         ("online", ctypes.c_uint8),
+
+         ("V_0", ctypes.c_float),
+        ("V_1", ctypes.c_float),
+        ("V_2", ctypes.c_float),
+        ("V_3", ctypes.c_float),
+        ("V_4", ctypes.c_float),
+        ("V_5", ctypes.c_float),
+        ("V_6", ctypes.c_float),
+        ("V_7", ctypes.c_float),
+        ("V_8", ctypes.c_float),
+        ("V_9", ctypes.c_float),
+        ("V_10", ctypes.c_float),
+        ("V_11", ctypes.c_float),
+        ("V_12", ctypes.c_float),
+        ("V_13", ctypes.c_float),
+        ("V_14", ctypes.c_float),
+        ("V_15", ctypes.c_float),
+        ("V_16", ctypes.c_float),
+        ("V_17", ctypes.c_float),
+        ("V_18", ctypes.c_float),
+        ("V_19", ctypes.c_float),
+        ("V_20", ctypes.c_float),
+
+
+
     ]
 
 

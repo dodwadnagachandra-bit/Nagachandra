@@ -89,8 +89,41 @@ def _rack_to_dict(rack: EmsRack) -> dict[str, Any]:
         "min_cell_t": rack.min_cell_t,
         "max_cell_t": rack.max_cell_t,
         "avg_cell_t": rack.avg_cell_t,
+	"max_cell_num": rack.max_cell_num,
+	"min_cell_num": rack.min_cell_num,
+	"full_cap_rem": rack.full_cap_rem,
+	"Delta_v": rack.Delta_v,
+	"Delta_t": rack.Delta_t,
+	"Tmax_id": rack.Tmax_id,
+        "Tmin_id": rack.Tmin_id,
+	"cycle_cnt": rack.cycle_cnt,
+
         "fault_code": rack.fault_code,
         "online": rack.online,
+
+	"V_0": rack.V_0,
+        "V_1": rack.V_1,
+        "V_2": rack.V_2,
+        "V_3": rack.V_3,
+        "V_4": rack.V_4,
+        "V_5": rack.V_5,
+        "V_6": rack.V_6,
+        "V_7": rack.V_7,
+        "V_8": rack.V_8,
+        "V_9": rack.V_9,
+        "V_10": rack.V_10,
+        "V_11": rack.V_11,
+        "V_12": rack.V_12,
+        "V_13": rack.V_13,
+        "V_14": rack.V_14,
+        "V_15": rack.V_15,
+        "V_16": rack.V_16,
+        "V_17": rack.V_17,
+        "V_18": rack.V_18,
+        "V_19": rack.V_19,
+        "V_20": rack.V_20,
+
+
     }
 
 
